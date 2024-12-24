@@ -17,7 +17,7 @@
           </svg>
         </div>
         <h2>登录</h2>
-        <p class="welcome-text">欢迎回来，请输入您的账号密码</p>
+        <p class="welcome-text">请输入您的账号密码</p>
       </div>
       
       <el-form :model="loginForm" :rules="rules" ref="loginForm" class="login-form">
