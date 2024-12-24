@@ -1,0 +1,7 @@
+/dist/
+/node_modules/
+.eslintrc.js
+*.d.ts
+*.svg
+*.ico
+/public/ 
