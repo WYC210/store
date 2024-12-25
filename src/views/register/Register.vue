@@ -1,5 +1,6 @@
 <template>
-  <div class="register-container">
+  <div class="register-container"
+       v-touch:swipe.right="handleSwipeRight">
     <el-card class="register-box">
       <div class="register-header">
         <div class="logo-container">
@@ -20,7 +21,11 @@
         <p class="welcome-text">创建您的账号，开始使用</p>
       </div>
       
-      <el-form :model="registerForm" :rules="rules" ref="registerForm" class="register-form">
+      <el-form 
+        :model="registerForm" 
+        :rules="rules" 
+        ref="registerFormRef"
+        class="register-form">
         <el-form-item prop="username">
           <el-input 
             v-model="registerForm.username"
@@ -102,6 +107,7 @@ export default {
   setup() {
     const router = useRouter()
     const loading = ref(false)
+    const registerFormRef = ref(null)
     const registerForm = ref({
       username: '',
       email: '',
@@ -123,7 +129,7 @@ export default {
     const rules = {
       username: [
         { required: true, message: '请输入用户名', trigger: 'blur' },
-        { min: 3, message: '用户名长度不能小于3位', trigger: 'blur' }
+        { min: 3, message: '用户名长度不能小于3位', trigger: 'change' }
       ],
       email: [
         { required: true, message: '请输入邮箱地址', trigger: 'blur' },
@@ -131,10 +137,10 @@ export default {
       ],
       password: [
         { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
+        { min: 6, message: '密码长度不能小于6位', trigger: 'change' }
       ],
       confirmPassword: [
-        { required: true, validator: validatePass2, trigger: 'blur' }
+        { required: true, validator: validatePass2, trigger: 'change' }
       ],
       agreement: [
         {
@@ -152,31 +158,60 @@ export default {
 
     const handleRegister = async () => {
       try {
+        await registerFormRef.value.validate()
         loading.value = true
+        
         const res = await register({
           username: registerForm.value.username,
           email: registerForm.value.email,
           password: registerForm.value.password
         })
         
-        ElMessage.success('注册成功！')
-        // 注册成功后跳转到登录页
-        router.push('/login')
+        if (res.state === 200) {
+          ElMessage.success('注册成功！')
+          router.push('/login')
+        } else {
+          // 根据不同的状态码显示不同的错误信息
+          switch (res.state) {
+            case 4000:
+              ElMessage.error('用户名已被占用')
+              break
+            case 5000:
+              ElMessage.error('注册时发生未知错误')
+              break
+            default:
+              ElMessage.error(res.message || '注册失败')
+          }
+        }
       } catch (error) {
-        console.error('注册失败:', error)
+        // 处理网络错误等其他错误
+        if (error.response) {
+          ElMessage.error(error.response.data.message || '服务器错误')
+        } else if (error.request) {
+          ElMessage.error('网络连接失败，请检查网络')
+        } else {
+          ElMessage.error('注册失败，请稍后重试')
+        }
       } finally {
         loading.value = false
       }
     }
 
+    const handleSwipeRight = () => {
+      // 向右滑动返回
+      router.back()
+    }
+
     return {
       registerForm,
+      registerFormRef,
       rules,
       loading,
       handleRegister,
       User,
       Lock,
-      Message
+      Message,
+      handleSwipeRight
     }
   }
 }
@@ -184,16 +219,18 @@ export default {
 
 <style scoped>
 .register-container {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   background: #212121;
   overflow: hidden;
+  padding: 20px;
 }
 
 .register-box {
-  width: 400px;
+  width: 100%;
+  max-width: 400px;
   padding: 40px;
   background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
   backdrop-filter: blur(10px);
@@ -201,6 +238,22 @@ export default {
   box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.18);
   animation: slideUp 0.6s ease-out;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .register-box {
+    padding: 20px;
+  }
+
+  .logo-container {
+    width: 120px;
+    height: 60px;
+  }
+
+  .register-button {
+    height: 40px;
+  }
 }
 
 /* 复用登录页面的大部分样式 */

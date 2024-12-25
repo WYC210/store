@@ -1,6 +1,8 @@
 /* eslint-disable */
 <template>
-  <div class="login-container">
+  <div class="login-container" 
+       v-touch:swipe.left="handleSwipeLeft"
+       v-touch:swipe.right="handleSwipeRight">
     <el-card class="login-box">
       <div class="login-header">
         <div class="logo-container">
@@ -20,13 +22,20 @@
         <p class="welcome-text">请输入您的账号密码</p>
       </div>
       
-      <el-form :model="loginForm" :rules="rules" ref="loginForm" class="login-form">
+      <el-form 
+        :model="loginForm" 
+        :rules="rules" 
+        ref="loginFormRef" 
+        class="login-form">
         <el-form-item prop="username">
           <el-input 
             v-model="loginForm.username"
             :prefix-icon="User"
             placeholder="请输入用户名"
             size="large">
+            <template #prefix>
+              <el-icon><User /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         
@@ -38,6 +47,9 @@
             placeholder="请输入密码"
             size="large"
             show-password>
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
 
@@ -85,8 +97,9 @@
 
 <script>
 import { ref } from 'vue'
-import { User, Lock, WechatFilled, Apple, ChromeFilled } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { http } from '@/utils/request'
 
 export default {
   name: 'Login',
@@ -95,7 +108,9 @@ export default {
   },
   
   setup() {
+    const router = useRouter()
     const loading = ref(false)
+    const loginFormRef = ref(null)
     const loginForm = ref({
       username: '',
       password: '',
@@ -104,33 +119,68 @@ export default {
 
     const rules = {
       username: [
-        { required: true, message: '请输入用户名', trigger: 'blur' },
-        { min: 3, message: '用户名长度不能小于3位', trigger: 'blur' }
+        { required: true, message: '请输入用户名', trigger: 'blur' }
       ],
       password: [
-        { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
+        { required: true, message: '请输入密码', trigger: 'blur' }
       ]
     }
 
-    const handleLogin = () => {
-      loading.value = true
-      setTimeout(() => {
+    const handleLogin = async () => {
+      try {
+        await loginFormRef.value.validate()
+        loading.value = true
+        
+        const res = await http.post('/users/login', {
+          username: loginForm.value.username,
+          password: loginForm.value.password
+        })
+        
+        if (res.state === 200) {
+          ElMessage.success('登录成功！')
+          localStorage.setItem('userInfo', JSON.stringify(res.data))
+          router.push('/home')
+        } else {
+          switch (res.state) {
+            case 5001:
+              ElMessage.error('用户不存在')
+              break
+            case 5002:
+              ElMessage.error('密码不正确')
+              break
+            default:
+              ElMessage.error(res.message || '登录失败')
+          }
+        }
+      } catch (error) {
+        if (error.response) {
+          ElMessage.error(error.response.data.message || '服务器错误')
+        } else if (error.request) {
+          ElMessage.error('网络连接失败，请检查网络')
+        } else {
+          ElMessage.error('登录失败，请稍后重试')
+        }
+      } finally {
         loading.value = false
-        ElMessage.success('登录成功！')
-      }, 1500)
+      }
+    }
+
+    const handleSwipeLeft = () => {
+      router.push('/register')
+    }
+    
+    const handleSwipeRight = () => {
+      router.back()
     }
 
     return {
       loginForm,
+      loginFormRef,
       rules,
       loading,
       handleLogin,
-      User,
-      Lock,
-      WechatFilled,
-      Apple,
-      ChromeFilled
+      handleSwipeLeft,
+      handleSwipeRight
     }
   }
 }
@@ -429,5 +479,13 @@ export default {
 
 .register-link a:hover {
   text-decoration: underline;
+}
+
+/* 优化动画性能 */
+.animated-logo {
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+  transform: translateZ(0);
 }
 </style>

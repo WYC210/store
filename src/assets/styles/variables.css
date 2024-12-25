@@ -1,0 +1,5 @@
+:root {
+  --bg-color: #212121;
+  --primary-gradient: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+  --box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+} 
