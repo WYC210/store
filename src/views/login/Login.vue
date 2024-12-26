@@ -131,9 +131,14 @@ export default {
         await loginFormRef.value.validate()
         loading.value = true
         
-        const res = await http.post('/users/login', {
-          username: loginForm.value.username,
-          password: loginForm.value.password
+        const formData = new FormData()
+        formData.append('username', loginForm.value.username)
+        formData.append('password', loginForm.value.password)
+        
+        const res = await http.post('/users/login', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         })
         
         if (res.state === 200) {
