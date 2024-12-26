@@ -3,8 +3,18 @@
 </template>
 
 <script>
+import { onUnmounted } from 'vue'
+import { provideAnimationManager } from './composables/useAnimationManager'
+
 export default {
-  name: 'App'
+  name: 'App',
+  setup() {
+    const animationManager = provideAnimationManager()
+
+    onUnmounted(() => {
+      animationManager.cleanup()
+    })
+  }
 }
 </script>
 

@@ -1,11 +1,9 @@
 /* eslint-disable */
 <template>
-  <div class="login-container" 
-       v-touch:swipe.left="handleSwipeLeft"
-       v-touch:swipe.right="handleSwipeRight">
+  <div class="login-container" ref="containerRef">
     <el-card class="login-box">
       <div class="login-header">
-        <div class="logo-container">
+        <div class="logo-container" ref="logoRef">
           <svg class="animated-text" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;" viewBox="41.8 35.90001 205.50002 94.1" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -23,14 +21,13 @@
       </div>
       
       <el-form 
-        :model="loginForm" 
+        :model="authStore.formState" 
         :rules="rules" 
         ref="loginFormRef" 
         class="login-form">
         <el-form-item prop="username">
           <el-input 
-            v-model="loginForm.username"
-            :prefix-icon="User"
+            v-model="authStore.formState.username"
             placeholder="请输入用户名"
             size="large">
             <template #prefix>
@@ -41,8 +38,7 @@
         
         <el-form-item prop="password">
           <el-input 
-            v-model="loginForm.password"
-            :prefix-icon="Lock"
+            v-model="authStore.formState.password"
             type="password"
             placeholder="请输入密码"
             size="large"
@@ -54,7 +50,7 @@
         </el-form-item>
 
         <div class="remember-forgot">
-          <el-checkbox v-model="loginForm.remember">记住我</el-checkbox>
+          <el-checkbox v-model="authStore.formState.remember">记住我</el-checkbox>
           <el-link type="primary" :underline="false">忘记密码？</el-link>
         </div>
 
@@ -96,96 +92,55 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { http } from '@/utils/request'
+import { useAuthStore } from '@/store/auth'
+import { useAnimation } from '@/composables/useAnimationManager'
 
 export default {
   name: 'Login',
-  created() {
-    document.title = '也是进贼窝了'
-  },
   
   setup() {
     const router = useRouter()
-    const loading = ref(false)
+    const authStore = useAuthStore()
+    const containerRef = ref(null)
+    const logoRef = ref(null)
     const loginFormRef = ref(null)
-    const loginForm = ref({
-      username: '',
-      password: '',
-      remember: false
-    })
 
-    const rules = {
-      username: [
-        { required: true, message: '请输入用户名', trigger: 'blur' }
-      ],
-      password: [
-        { required: true, message: '请输入密码', trigger: 'blur' }
-      ]
-    }
+    // 使用动画管理器
+    const animationManager = useAnimation(logoRef)
 
+    // 登录处理
     const handleLogin = async () => {
       try {
         await loginFormRef.value.validate()
-        loading.value = true
-        
         const formData = new FormData()
-        formData.append('username', loginForm.value.username)
-        formData.append('password', loginForm.value.password)
+        formData.append('username', authStore.formState.username)
+        formData.append('password', authStore.formState.password)
         
-        const res = await http.post('/users/login', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
-        
-        if (res.state === 200) {
-          ElMessage.success('登录成功！')
-          localStorage.setItem('userInfo', JSON.stringify(res.data))
+        const success = await authStore.login(formData)
+        if (success) {
           router.push('/home')
-        } else {
-          switch (res.state) {
-            case 5001:
-              ElMessage.error('用户不存在')
-              break
-            case 5002:
-              ElMessage.error('密码不正确')
-              break
-            default:
-              ElMessage.error(res.message || '登录失败')
-          }
         }
       } catch (error) {
-        if (error.response) {
-          ElMessage.error(error.response.data.message || '服务器错误')
-        } else if (error.request) {
-          ElMessage.error('网络连接失败，请检查网络')
-        } else {
-          ElMessage.error('登录失败，请稍后重试')
-        }
-      } finally {
-        loading.value = false
+        console.error('Login validation failed:', error)
       }
     }
 
-    const handleSwipeLeft = () => {
-      router.push('/register')
-    }
-    
-    const handleSwipeRight = () => {
-      router.back()
-    }
-
     return {
-      loginForm,
+      authStore,
       loginFormRef,
-      rules,
-      loading,
+      containerRef,
+      logoRef,
       handleLogin,
-      handleSwipeLeft,
-      handleSwipeRight
+      rules: {
+        username: [
+          { required: true, message: '请输入用户名', trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: '请输入密码', trigger: 'blur' }
+        ]
+      }
     }
   }
 }

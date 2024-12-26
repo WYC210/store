@@ -1,5 +1,5 @@
 node_modules/
-dist/eishen
+dist
 .env.local
 .env.*.local
 npm-debug.log*

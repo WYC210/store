@@ -1,10 +1,9 @@
 <template>
-  <div class="register-container"
-       v-touch:swipe.right="handleSwipeRight">
+  <div class="register-container" ref="containerRef">
     <el-card class="register-box">
       <div class="register-header">
-        <div class="logo-container">
-          <svg class="animated-text" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;" viewBox="41.8 35.90001 205.50002 94.1" xmlns="http://www.w3.org/2000/svg">
+        <div class="logo-container" ref="logoRef">
+          <svg class="animated-text" preserveAspectRatio="xMidYMid meet" viewBox="41.8 35.90001 205.50002 94.1">
             <defs>
               <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" style="stop-color:#FF6B6B"/>
@@ -22,52 +21,60 @@
       </div>
       
       <el-form 
-        :model="registerForm" 
+        :model="authStore.registerState" 
         :rules="rules" 
         ref="registerFormRef"
         class="register-form">
         <el-form-item prop="username">
           <el-input 
-            v-model="registerForm.username"
-            :prefix-icon="User"
+            v-model="authStore.registerState.username"
             placeholder="请输入用户名"
             size="large">
+            <template #prefix>
+              <el-icon><User /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
 
         <el-form-item prop="email">
           <el-input 
-            v-model="registerForm.email"
-            :prefix-icon="Message"
+            v-model="authStore.registerState.email"
             placeholder="请输入邮箱"
             size="large">
+            <template #prefix>
+              <el-icon><Message /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
         
         <el-form-item prop="password">
           <el-input 
-            v-model="registerForm.password"
-            :prefix-icon="Lock"
+            v-model="authStore.registerState.password"
             type="password"
             placeholder="请输入密码"
             size="large"
             show-password>
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
 
         <el-form-item prop="confirmPassword">
           <el-input 
-            v-model="registerForm.confirmPassword"
-            :prefix-icon="Lock"
+            v-model="authStore.registerState.confirmPassword"
             type="password"
             placeholder="请确认密码"
             size="large"
             show-password>
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
           </el-input>
         </el-form-item>
 
         <el-form-item prop="agreement">
-          <el-checkbox v-model="registerForm.agreement">
+          <el-checkbox v-model="authStore.registerState.agreement">
             我已阅读并同意
             <el-link type="primary" :underline="false">用户协议</el-link>
             和
@@ -80,9 +87,9 @@
             type="primary" 
             @click="handleRegister" 
             class="register-button"
-            :loading="loading"
+            :loading="authStore.loading"
             size="large">
-            {{ loading ? '注册中...' : '注册' }}
+            {{ authStore.loading ? '注册中...' : '注册' }}
           </el-button>
         </el-form-item>
 
@@ -96,122 +103,88 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, Lock, Message } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { register } from '@/api/user'
+import { useAuthStore } from '@/store/auth'
+import { useAnimation } from '@/composables/useAnimationManager'
 
 export default {
-  name: 'UserRegister',
+  name: 'Register',
+  
   setup() {
     const router = useRouter()
-    const loading = ref(false)
+    const authStore = useAuthStore()
+    const containerRef = ref(null)
+    const logoRef = ref(null)
     const registerFormRef = ref(null)
-    const registerForm = ref({
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      agreement: false
-    })
 
+    // 使用动画管理器
+    const animationManager = useAnimation(logoRef)
+
+    // 注册处理
+    const handleRegister = async () => {
+      try {
+        await registerFormRef.value?.validate()
+        const formData = new FormData()
+        formData.append('username', authStore.registerState.username)
+        formData.append('email', authStore.registerState.email)
+        formData.append('password', authStore.registerState.password)
+        
+        const success = await authStore.register(formData)
+        if (success) {
+          router.push('/login')
+        }
+      } catch (error) {
+        console.error('Register validation failed:', error)
+      }
+    }
+
+    // 验证确认密码
     const validatePass2 = (rule, value, callback) => {
       if (value === '') {
         callback(new Error('请再次输入密码'))
-      } else if (value !== registerForm.value.password) {
+      } else if (value !== authStore.registerState.password) {
         callback(new Error('两次输入密码不一致!'))
       } else {
         callback()
       }
     }
 
-    const rules = {
-      username: [
-        { required: true, message: '请输入用户名', trigger: 'blur' },
-        { min: 3, message: '用户名长度不能小于3位', trigger: 'change' }
-      ],
-      email: [
-        { required: true, message: '请输入邮箱地址', trigger: 'blur' },
-        { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-      ],
-      password: [
-        { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, message: '密码长度不能小于6位', trigger: 'change' }
-      ],
-      confirmPassword: [
-        { required: true, validator: validatePass2, trigger: 'change' }
-      ],
-      agreement: [
-        {
-          validator: (rule, value, callback) => {
-            if (!value) {
-              callback(new Error('请阅读并同意用户协议和隐私政策'))
-            } else {
-              callback()
-            }
-          },
-          trigger: 'change'
-        }
-      ]
-    }
-
-    const handleRegister = async () => {
-      try {
-        await registerFormRef.value.validate()
-        loading.value = true
-        
-        const res = await register({
-          username: registerForm.value.username,
-          email: registerForm.value.email,
-          password: registerForm.value.password
-        })
-        
-        if (res.state === 200) {
-          ElMessage.success('注册成功！')
-          router.push('/login')
-        } else {
-          // 根据不同的状态码显示不同的错误信息
-          switch (res.state) {
-            case 4000:
-              ElMessage.error('用户名已被占用')
-              break
-            case 5000:
-              ElMessage.error('注册时发生未知错误')
-              break
-            default:
-              ElMessage.error(res.message || '注册失败')
-          }
-        }
-      } catch (error) {
-        // 处理网络错误等其他错误
-        if (error.response) {
-          ElMessage.error(error.response.data.message || '服务器错误')
-        } else if (error.request) {
-          ElMessage.error('网络连接失败，请检查网络')
-        } else {
-          ElMessage.error('注册失败，请稍后重试')
-        }
-      } finally {
-        loading.value = false
-      }
-    }
-
-    const handleSwipeRight = () => {
-      // 向右滑动返回
-      router.back()
-    }
-
     return {
-      registerForm,
+      authStore,
       registerFormRef,
-      rules,
-      loading,
+      containerRef,
+      logoRef,
       handleRegister,
-      User,
-      Lock,
-      Message,
-      handleSwipeRight
+      rules: {
+        username: [
+          { required: true, message: '请输入用户名', trigger: 'blur' },
+          { min: 3, message: '用户名长度不能小于3位', trigger: 'blur' }
+        ],
+        email: [
+          { required: true, message: '请输入邮箱地址', trigger: 'blur' },
+          { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+          { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
+        ],
+        confirmPassword: [
+          { required: true, validator: validatePass2, trigger: 'blur' }
+        ],
+        agreement: [
+          {
+            validator: (rule, value, callback) => {
+              if (!value) {
+                callback(new Error('请阅读并同意用户协议和隐私政策'))
+              } else {
+                callback()
+              }
+            },
+            trigger: 'change'
+          }
+        ]
+      }
     }
   }
 }
