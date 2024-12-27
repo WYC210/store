@@ -18,35 +18,13 @@ export function createAnimationManager() {
     })
   }
 
-  // 开始动画
-  const startAnimation = (name) => {
-    const animation = animations.get(name)
-    if (!animation) return
-
-    animation.active = true
-    if (animation.element) {
-      animation.element.style.animation = animation.animationStyle
-    }
-  }
-
-  // 停止动画
-  const stopAnimation = (name) => {
-    const animation = animations.get(name)
-    if (!animation) return
-
-    animation.active = false
-    if (animation.element) {
-      animation.element.style.animation = 'none'
-    }
-  }
-
   // 清理所有动画
   const cleanup = () => {
-    animations.forEach((animation, element) => {
-      if (element.style) {
-        element.style.animation = 'none'
-        element.style.removeProperty('stroke-dasharray')
-        element.style.removeProperty('stroke-dashoffset')
+    animations.forEach((_, path) => {
+      if (path && path.style) {
+        path.style.animation = 'none'
+        path.style.removeProperty('stroke-dasharray')
+        path.style.removeProperty('stroke-dashoffset')
       }
     })
     animations.clear()
@@ -54,8 +32,6 @@ export function createAnimationManager() {
 
   return {
     registerSvgAnimation,
-    startAnimation,
-    stopAnimation,
     cleanup
   }
 }

@@ -1,279 +1,1336 @@
 <template>
-  <div class="home-container"
-       v-touch:pandown="handlePullToRefresh"
-       v-touch:press="handlePress">
-    <!-- 顶部导航栏 -->
-    <header class="header">
-      <div class="header-left">
-        <div class="logo-container">
-          <svg class="animated-text" preserveAspectRatio="xMidYMid meet" viewBox="41.8 35.90001 205.50002 94.1" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#FF6B6B"/>
-                <stop offset="50%" style="stop-color:#4ECDC4"/>
-                <stop offset="100%" style="stop-color:#45B7D1"/>
-              </linearGradient>
-            </defs>
-            <path d="M 53.5 47.800003 Q 55.2 45.90001 58.5 45.90001 L 58.7 45.90001 Q 61.5 45.90001 63.4 47.300003 Q 65.3 48.700005 66 51.40001 L 76 92.90001 L 87.7 51.40001 Q 89.2 45.90001 95 45.90001 L 95.600006 45.90001 Q 101.3 45.90001 102.9 51.40001 L 115.200005 93.200005 L 125.200005 51.40001 Q 126.6 45.90001 132.1 45.90001 L 132.3 45.90001 Q 135.70001 45.90001 137.55 47.800003 Q 139.4 49.700005 138.6 52.90001 L 123.200005 114.40001 Q 121.9 120.00001 116 120.00001 L 115.700005 120.00001 Q 109.9 120.00001 108.4 114.50001 L 95.4 68.20001 L 82.7 114.50001 Q 81.3 120.00001 75.5 120.00001 L 75.2 120.00001 Q 69.3 120.00001 68 114.40001 L 52.6 52.90001 Q 51.8 49.700005 53.5 47.800003 Z" style="--path-length: 583.52783; fill: transparent; stroke: url(#logoGradient)"/>
-            <path d="M 235.65001 108.65001 Q 237.30002 110.30001 237.30002 113.40001 L 237.30002 113.600006 Q 237.30002 116.700005 235.65001 118.350006 Q 234.00002 120.00001 230.90001 120.00001 L 187.00002 120.00001 Q 184.00002 120.00001 182.30002 118.25001 Q 180.6 116.50001 180.6 114.00001 L 180.6 113.40001 Q 180.6 111.100006 181.30002 109.50001 Q 182.00002 107.90001 184.30002 104.80001 L 216.70001 58.900005 L 187.80002 58.900005 Q 184.70001 58.900005 183.05002 57.250008 Q 181.40001 55.600006 181.40001 52.500008 L 181.40001 52.300003 Q 181.40001 49.200005 183.05002 47.550003 Q 184.70001 45.90001 187.80002 45.90001 L 228.6 45.90001 Q 231.6 45.90001 233.30002 47.65001 Q 235.00002 49.40001 235.00002 51.90001 L 235.00002 52.500008 Q 235.00002 54.800003 234.35 56.300007 Q 233.70001 57.800007 231.80002 60.500008 L 198.90001 107.00001 L 230.90001 107.00001 Q 234.00002 107.00001 235.65001 108.65001 Z" style="--path-length: 404.6023; fill: transparent; stroke: url(#logoGradient)"/>
-          </svg>
-        </div>
-      </div>
-      
-      <div class="header-center">
+  <div class="home-container" :class="{ 'light-theme': !isDarkTheme }">
+    <header class="navbar" :class="{ 'navbar-fixed': isNavFixed }">
+      <router-link to="/home" class="logo-container">
+        <img src="@/assets/logo_w.png" alt="Logo" class="logo" />
+        <CyberText />
+      </router-link>
+      <div class="search-container">
         <el-input
-          v-model="searchText"
-          placeholder="搜索商品"
+          v-model="searchKeyword"
+          placeholder="输入关键词进行搜索..."
+          class="search-input"
           :prefix-icon="Search"
-          class="search-input">
-        </el-input>
-      </div>
-      
-      <div class="header-right">
-        <el-button type="primary" class="cart-button" @click="goToCart">
-          <el-badge :value="cartCount" class="cart-badge">
-            <el-icon><ShoppingCart /></el-icon>
-          </el-badge>
-          购物车
-        </el-button>
-        <el-dropdown trigger="click">
-          <el-avatar :size="40" :src="userInfo?.avatar || defaultAvatar" />
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item>个人中心</el-dropdown-item>
-              <el-dropdown-item>我的订单</el-dropdown-item>
-              <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
+          @focus="handleSearchFocus"
+          @blur="handleSearchBlur"
+          :class="{ 'search-active': isSearchFocused }"
+        >
+          <template #append>
+            <el-button 
+              @click="handleSearch" 
+              class="search-button"
+              :class="{ 'search-button-active': isSearchFocused }"
+            >
+              <span class="button-text">搜索</span>
+              <div class="button-glitch"></div>
+            </el-button>
           </template>
-        </el-dropdown>
+        </el-input>
+        <div class="search-decoration left"></div>
+        <div class="search-decoration right"></div>
       </div>
+      <nav class="nav-links">
+        <ThemeToggle @theme-change="handleThemeChange" />
+        <el-button class="nav-home" @click="goToHome">首页</el-button>
+        <el-button class="nav-cart" @click="goToCart">购物车</el-button>
+        <el-button class="nav-profile" @click="goToProfile">个人中心</el-button>
+      </nav>
     </header>
+    <div class="navbar-placeholder" v-show="isNavFixed"></div>
 
-    <!-- 主要内容区域 -->
-    <main class="main-content">
-      <!-- 这里可以添加商品列表等内容 -->
-    </main>
+    <section class="main-content">
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <section class="categories">
+            <h2>商品分类</h2>
+            <el-menu 
+              class="category-menu" 
+              :default-active="activeIndex"
+            >
+              <el-menu-item 
+                v-for="(category, index) in categories" 
+                :key="index"
+                :index="String(index)"
+                @mouseenter="handleMouseEnter(category)"
+              >
+                {{ category.name }}
+              </el-menu-item>
+            </el-menu>
+            <!-- 二级菜单 -->
+            <div 
+              class="sub-menu" 
+              v-show="activeCategory"
+              @mouseenter="handleSubmenuEnter"
+              @mouseleave="handleSubmenuLeave"
+            >
+              <h3>{{ activeCategory?.name }}</h3>
+              <div class="sub-categories">
+                <span 
+                  v-for="(subCategory, index) in activeCategory?.children" 
+                  :key="index"
+                  class="sub-category"
+                  @click="handleSubCategoryClick(subCategory)"
+                >
+                  {{ subCategory }}
+                </span>
+              </div>
+            </div>
+          </section>
+        </el-col>
+        <el-col :span="18">
+          <!-- 轮播图 -->
+          <el-carousel class="carousel" autoplay>
+            <el-carousel-item v-for="(item, index) in carouselItems" :key="index">
+              <ImageLoader :src="item.image" alt="轮播图" class="carousel-image" />
+            </el-carousel-item>
+          </el-carousel>
+        </el-col>
+      </el-row>
+    </section>
+
+    <section class="products">
+      <h2>热销商品</h2>
+      <el-row :gutter="20">
+        <el-col v-for="product in products" :key="product.id" :span="6">
+          <el-card class="product-card">
+            <ImageLoader :src="product.image" alt="商品图片" />
+            <div class="product-info">
+              <h3>{{ product.name }}</h3>
+              <p>价格: ¥{{ product.price }}</p>
+              <el-button type="primary" @click="addToCart(product)">加入购物车</el-button>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ShoppingCart } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
+import ImageLoader from '@/components/ImageLoader.vue'
+import CyberText from '@/components/CyberText.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
-const searchText = ref('')
-const cartCount = ref(0)
-const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || '{}'))
-const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+const searchKeyword = ref('')
+const activeIndex = ref('0')
+const activeCategory = ref(null)
+
+// 分类数据
+const categories = ref([
+  {
+    name: '电子产品',
+    children: ['手机', '平板电脑', '笔记本电脑', '显示器', '智能手表', '耳机']
+  },
+  {
+    name: '服装',
+    children: ['上衣', '裤子', '裙子', '外套', '运动服', '内衣']
+  },
+  {
+    name: '家居用品',
+    children: ['床上用品', '厨房用具', '家具', '灯具', '收纳用品']
+  },
+  {
+    name: '运动器材',
+    children: ['跑步机', '哑铃', '瑜伽垫', '篮球', '羽毛球']
+  }
+])
+
+let timeoutId = null
+
+// 处理鼠标悬停主菜单
+const handleMouseEnter = (category) => {
+  if (timeoutId) {
+    clearTimeout(timeoutId)
+  }
+  activeCategory.value = category
+}
+
+// 处理鼠标进入二级菜单
+const handleSubmenuEnter = () => {
+  if (timeoutId) {
+    clearTimeout(timeoutId)
+  }
+}
+
+// 处理鼠标离开二级菜单
+const handleSubmenuLeave = () => {
+  timeoutId = setTimeout(() => {
+    activeCategory.value = null
+  }, 200)
+}
+
+// 处理点击二级分类
+const handleSubCategoryClick = (subCategory) => {
+  console.log('选择的子分类:', subCategory)
+  // 这里可以添加跳转到对应分类页面的逻辑
+  router.push({
+    path: '/products',
+    query: { category: subCategory }
+  })
+}
+
+const carouselItems = ref([
+  { 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%201.jpg'
+  },
+  { 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%202.jpg'
+  },
+  { 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%203.jpg'
+  }
+])
+
+const products = ref([
+  { 
+    id: 1, 
+    name: '智能手机', 
+    price: 2999, 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%204.jpg'
+  },
+  { 
+    id: 2, 
+    name: '运动鞋', 
+    price: 799, 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%205.jpg'
+  },
+  { 
+    id: 3, 
+    name: '咖啡机', 
+    price: 1299, 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%206.jpg'
+  },
+  { 
+    id: 4, 
+    name: '无线耳机', 
+    price: 999, 
+    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%207.jpg'
+  }
+])
+
+const addToCart = (product) => {
+  console.log(`添加到购物车: ${product.name}`)
+}
+
+const goToHome = () => {
+  router.push('/home')
+}
+
+const goToProducts = () => {
+  router.push('/products')
+}
 
 const goToCart = () => {
   router.push('/cart')
 }
 
-const handleLogout = () => {
-  localStorage.removeItem('userInfo')
-  router.push('/login')
-  ElMessage.success('退出成功')
+const goToProfile = () => {
+  router.push('/profile')
 }
 
-const handlePullToRefresh = (e) => {
-  if (e.distance > 100) {
-    ElMessage.success('刷新中...')
-    // 这里可以添加实际的刷新逻辑
-    setTimeout(() => {
-      // 模拟刷新完成
-      ElMessage.success('刷新成功')
-    }, 1000)
+const handleSearch = () => {
+  console.log('搜索关键词:', searchKeyword.value)
+  // 这里添加搜索逻辑
+}
+
+const isNavFixed = ref(false)
+const navbarHeight = ref(0)
+
+// 监听滚动事件
+const handleScroll = () => {
+  if (window.scrollY > 0) {
+    isNavFixed.value = true
+  } else {
+    isNavFixed.value = false
   }
 }
 
-const handlePress = () => {
-  ElMessage({
-    message: '长按可以进行更多操作',
-    type: 'info'
-  })
+onMounted(() => {
+  // 获取导航栏高度
+  const navbar = document.querySelector('.navbar')
+  if (navbar) {
+    navbarHeight.value = navbar.offsetHeight
+  }
+  // 添加滚动监听
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  // 移除滚动监听
+  window.removeEventListener('scroll', handleScroll)
+})
+
+const isSearchFocused = ref(false)
+
+const handleSearchFocus = () => {
+  isSearchFocused.value = true
 }
 
-onMounted(() => {
-  // 这里可以获取购物车数量等初始数据
-  cartCount.value = 0
-})
+const handleSearchBlur = () => {
+  isSearchFocused.value = false
+}
+
+const isDarkTheme = ref(true)
+
+const handleThemeChange = (isDark) => {
+  isDarkTheme.value = isDark
+}
 </script>
 
 <style scoped>
 .home-container {
+  padding: 20px;
+  background-color: #0B0B2B;
+  background-image: 
+    linear-gradient(
+      45deg,
+      rgba(11, 11, 43, 0.97),
+      rgba(20, 10, 40, 0.97)
+    );
   min-height: 100vh;
-  background: #f5f7fa;
+  color: #fff;
 }
 
-.header {
-  height: var(--header-height);
-  background: white;
+.navbar {
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: linear-gradient(
+    rgba(13, 13, 48, 0.95),
+    rgba(23, 12, 45, 0.95)
+  );
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid rgba(255, 0, 255, 0.3);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.2),
+    inset 0 0 20px rgba(255, 0, 255, 0.2);
+  border-top: 3px solid #FF00FF;
+  transition: all 0.3s ease;
+  width: 100%;
+  z-index: 1000;
 }
 
-.header-left {
-  flex: 1;
+.navbar::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #00FFFF,
+    #FF00FF,
+    transparent
+  );
+  animation: neonFlow 2s linear infinite;
+}
+
+@keyframes neonFlow {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.navbar-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  animation: slideDown 0.3s ease;
+}
+
+.navbar-placeholder {
+  height: 70px; /* 与导航栏高度保持一致 */
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .logo-container {
-  width: 120px;
-  height: 50px;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
-.header-center {
-  flex: 2;
-  display: flex;
-  justify-content: center;
-  padding: 0 20px;
+.logo {
+  height: 40px;
+  margin-right: 10px;
+}
+
+.search-container {
+  flex: 1;
+  max-width: 500px;
+  margin: 0 20px;
+  position: relative;
+  padding: 5px;
 }
 
 .search-input {
   width: 100%;
-  max-width: 500px;
 }
 
-.header-right {
-  flex: 1;
+.nav-links {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 20px;
-}
-
-.cart-button {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.cart-badge :deep(.el-badge__content) {
-  background-color: #ff4949;
+  gap: 15px;
 }
 
 .main-content {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 20px;
+  margin: 20px 0;
 }
 
-/* SVG 动画相关样式 */
-.animated-text {
-  max-width: 100%;
+.carousel {
+  margin: 20px 0;
+}
+
+.carousel-image {
+  width: 100%;
   height: auto;
 }
 
-.animated-text path {
-  fill: transparent;
-  stroke: url(#logoGradient);
-  stroke-width: 2;
-  stroke-dasharray: var(--path-length);
-  stroke-dashoffset: var(--path-length);
-  animation: logo-anim 15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  transform-origin: center;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.categories {
+  position: relative;
+  margin-top: 20px;
 }
 
-@keyframes logo-anim {
+.category-menu {
+  border-right: none;
+  width: 160px;
+  background: linear-gradient(
+    to right,
+    rgba(20, 15, 25, 0.95),
+    rgba(15, 10, 20, 0.95)
+  );
+  border: 2px solid #4B0082;
+  clip-path: polygon(0 0, 95% 0, 100% 100%, 5% 100%);
+}
+
+:deep(.el-menu) {
+  background: transparent;
+  border: none;
+}
+
+:deep(.el-menu-item) {
+  background: transparent;
+  color: #fff;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  border-left: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+:deep(.el-menu-item:hover) {
+  background: rgba(0, 255, 255, 0.1);
+  border-left: 2px solid #00FFFF;
+  color: #00FFFF;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+
+.sub-menu {
+  position: absolute;
+  left: 160px;
+  top: 0;
+  width: 200px;
+  min-height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(32, 16, 16, 0.9),
+    rgba(16, 16, 32, 0.9)
+  );
+  border: 2px solid #8B4513;
+  clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+  padding: 15px;
+  z-index: 10;
+  animation: hologramAppear 0.3s ease;
+}
+
+@keyframes hologramAppear {
   0% {
-    stroke-dashoffset: var(--path-length);
-    stroke-dasharray: var(--path-length) var(--path-length);
     opacity: 0;
-    fill: transparent;
-  }
-  5% {
-    opacity: 1;
-    stroke-dashoffset: var(--path-length);
-    stroke-dasharray: var(--path-length) var(--path-length);
-  }
-  50% {
-    stroke-dashoffset: 0;
-    stroke-dasharray: var(--path-length) var(--path-length);
-    fill: transparent;
-  }
-  60% {
-    stroke-dashoffset: 0;
-    stroke-dasharray: var(--path-length) var(--path-length);
-    fill: currentColor;
-    opacity: 1;
-  }
-  75% {
-    stroke-dashoffset: 0;
-    stroke-dasharray: var(--path-length) var(--path-length);
-    fill: currentColor;
-    opacity: 1;
-  }
-  85% {
-    stroke-dashoffset: 0;
-    stroke-dasharray: var(--path-length) var(--path-length);
-    fill: transparent;
-    opacity: 1;
-  }
-  95% {
-    stroke-dashoffset: var(--path-length);
-    stroke-dasharray: var(--path-length) var(--path-length);
-    fill: transparent;
-    opacity: 1;
+    transform: translateX(-10px) skewX(5deg);
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
   }
   100% {
-    stroke-dashoffset: var(--path-length);
-    stroke-dasharray: var(--path-length) var(--path-length);
-    fill: transparent;
-    opacity: 0;
+    opacity: 1;
+    transform: translateX(0) skewX(0);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
 }
 
-/* 移动端适配 */
-@media screen and (max-width: 768px) {
-  .header {
-    height: var(--mobile-header-height);
-    flex-wrap: wrap;
-    padding: 10px;
-  }
+.sub-menu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    transparent 0%,
+    rgba(0, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  animation: scanline 2s linear infinite;
+}
 
-  .header-left {
-    flex: 0 0 100%;
-    display: flex;
-    justify-content: center;
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
   }
-
-  .header-center {
-    flex: 1 0 100%;
-    order: 3;
-    padding: 10px 0;
-  }
-
-  .header-right {
-    flex: 0 0 100%;
-    justify-content: center;
-  }
-
-  .cart-button {
-    font-size: 12px;
-    padding: 8px 15px;
-  }
-
-  .logo-container {
-    width: 100px;
-    height: 40px;
+  100% {
+    transform: translateY(100%);
   }
 }
 
-/* 平板适配 */
-@media screen and (min-width: 769px) and (max-width: 1024px) {
-  .header {
-    padding: 0 15px;
+.sub-menu h3 {
+  margin-bottom: 15px;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+  padding-bottom: 10px;
+  font-size: 16px;
+}
+
+.sub-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sub-category {
+  padding: 5px 10px;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s;
+  user-select: none;
+}
+
+.sub-category:hover {
+  background: rgba(0, 255, 255, 0.2);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+}
+
+.el-menu-item {
+  padding: 0 15px;
+  height: 40px;
+  line-height: 40px;
+  font-size: 14px;
+}
+
+.el-menu-item:hover {
+  background-color: #ecf5ff;
+}
+
+.products {
+  margin-top: 20px;
+}
+
+.product-card {
+  text-align: center;
+  background: linear-gradient(
+    45deg,
+    rgba(13, 13, 48, 0.95),
+    rgba(23, 12, 45, 0.95)
+  );
+  border: 2px solid #00FFFF;
+  clip-path: polygon(0 5%, 95% 0, 100% 95%, 5% 100%);
+  transform: perspective(1000px) rotateX(5deg);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.2),
+    inset 0 0 10px rgba(255, 0, 255, 0.1);
+}
+
+.product-card img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.product-info {
+  margin-top: 10px;
+}
+
+.product-info h3 {
+  margin: 10px 0;
+  color: #fff;
+  text-shadow: 
+    0 0 5px rgba(0, 255, 255, 0.5),
+    0 0 10px rgba(255, 0, 255, 0.3);
+}
+
+.product-info p {
+  color: #00FFFF;
+  text-shadow: 
+    0 0 5px rgba(0, 255, 255, 0.5),
+    0 0 10px rgba(255, 0, 255, 0.3);
+}
+
+:deep(.el-input__wrapper) {
+  background: rgba(13, 13, 48, 0.8);
+  border: 2px solid #00FFFF;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  box-shadow: 
+    0 0 15px rgba(0, 255, 255, 0.3),
+    inset 0 0 10px rgba(0, 255, 255, 0.2);
+  border-color: #00FFFF;
+}
+
+:deep(.el-input__inner) {
+  color: #00FFFF;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: rgba(0, 255, 255, 0.5);
+}
+
+:deep(.el-button) {
+  background: rgba(13, 13, 48, 0.9);
+  border: 1px solid #FF00FF;
+  color: #FF00FF;
+  font-family: 'Orbitron', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+:deep(.el-button:hover) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.5),
+    inset 0 0 5px rgba(255, 0, 255, 0.3);
+  background: rgba(0, 255, 255, 0.1);
+  border-color: #FF00FF;
+}
+
+:deep(.el-button:hover::before) {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+  animation: buttonGlow 1s linear infinite;
+}
+
+@keyframes buttonGlow {
+  0% {
+    transform: rotate(45deg) translateY(0);
+  }
+  100% {
+    transform: rotate(45deg) translateY(100%);
+  }
+}
+
+:deep(.el-button--primary) {
+  background: linear-gradient(45deg, #FF00FF, #00FFFF);
+  border: none;
+  color: #000033;
+  font-weight: bold;
+}
+
+:deep(.el-button--primary:hover) {
+  background: linear-gradient(45deg, #00FFFF, #FF00FF);
+  color: #fff;
+  box-shadow: 
+    0 0 10px #FF00FF,
+    0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.decorative-gear {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border: 3px solid #8B4513;
+  border-radius: 50%;
+  border-top-color: #FF4500;
+  opacity: 0.3;
+  animation: rotate 10s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.search-decoration {
+  position: absolute;
+  width: 20px;
+  height: 2px;
+  background: #4B0082;
+  transition: all 0.3s ease;
+}
+
+.search-decoration.left {
+  left: 0;
+  top: 0;
+}
+
+.search-decoration.right {
+  right: 0;
+  bottom: 0;
+}
+
+.search-active ~ .search-decoration.left {
+  width: 100%;
+  background: linear-gradient(90deg, #9400D3, transparent);
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+  animation: glitchLine 1s infinite;
+}
+
+.search-active ~ .search-decoration.right {
+  width: 100%;
+  background: linear-gradient(90deg, transparent, #9400D3);
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+  animation: glitchLine 1s infinite reverse;
+}
+
+@keyframes glitchLine {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  80% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  90% {
+    transform: translateX(-10px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.search-button {
+  position: relative;
+  overflow: hidden;
+  background: rgba(20, 15, 25, 0.9);
+  border: none;
+  border: 1px solid #4B0082;
+  transition: all 0.3s ease;
+  color: #9400D3;
+}
+
+.search-button-active {
+  background: rgba(75, 0, 130, 0.3);
+  animation: buttonGlitch 0.3s infinite;
+}
+
+.button-text {
+  position: relative;
+  z-index: 1;
+}
+
+.button-glitch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    45deg, 
+    transparent 45%, 
+    rgba(138, 43, 226, 0.3) 50%, 
+    transparent 55%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.search-button:hover .button-glitch {
+  transform: translateX(100%);
+}
+
+@keyframes buttonGlitch {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-1px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* 浅色主题 */
+.light-theme {
+  background-color: #F4ECD8;
+  background-image: 
+    linear-gradient(
+      rgba(244, 236, 216, 0.97),
+      rgba(238, 228, 204, 0.97)
+    ),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23AA8B56' fill-opacity='0.02' d='M0 0h200v200H0z' filter='blur(2px)'/%3E%3C/svg%3E");
+  position: relative;
+}
+
+.light-theme::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(244, 236, 216, 0), rgba(205, 190, 155, 0.1)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(139, 109, 30, 0.03) 3px,
+      transparent 3px
+    );
+  pointer-events: none;
+  z-index: -1;
+}
+
+.light-theme .navbar {
+  background: linear-gradient(
+    rgba(244, 236, 216, 0.95),
+    rgba(238, 228, 204, 0.95)
+  );
+  border-bottom: 2px solid rgba(139, 109, 30, 0.2);
+  box-shadow: 
+    0 0 20px rgba(139, 109, 30, 0.1),
+    inset 0 0 20px rgba(139, 109, 30, 0.05);
+}
+
+.light-theme .categories {
+  background: rgba(244, 236, 216, 0.95);
+  border: 1px solid rgba(139, 109, 30, 0.3);
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 
+    0 5px 15px rgba(139, 109, 30, 0.1),
+    inset 0 0 10px rgba(139, 109, 30, 0.05);
+  background-image: 
+    linear-gradient(
+      rgba(244, 236, 216, 0.95),
+      rgba(238, 228, 204, 0.95)
+    ),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23paper)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+.light-theme .categories h2 {
+  color: #2C4F2C;
+  font-family: "楷体", "KaiTi", serif;
+  font-size: 1.5em;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(139, 109, 30, 0.2);
+  text-shadow: 2px 2px 4px rgba(139, 109, 30, 0.1);
+  position: relative;
+}
+
+.light-theme .categories h2::after {
+  content: '『 』';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -12px;
+  font-size: 0.8em;
+  color: rgba(139, 109, 30, 0.6);
+  background: rgba(244, 236, 216, 0.95);
+  padding: 0 10px;
+}
+
+.light-theme :deep(.category-menu) {
+  background: transparent;
+  border: none;
+}
+
+.light-theme :deep(.el-menu-item) {
+  font-family: "楷体", "KaiTi", serif;
+  color: #2C4F2C;
+  letter-spacing: 2px;
+  font-size: 1.1em;
+  height: 45px;
+  line-height: 45px;
+  margin: 5px 0;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  position: relative;
+  padding-left: 40px !important;
+}
+
+.light-theme :deep(.el-menu-item)::before {
+  content: '•';
+  position: absolute;
+  left: 20px;
+  opacity: 0.6;
+}
+
+.light-theme :deep(.el-menu-item:hover),
+.light-theme :deep(.el-menu-item.is-active) {
+  background: rgba(139, 109, 30, 0.1);
+  color: #1B3B1B;
+  box-shadow: 
+    0 2px 8px rgba(139, 109, 30, 0.1),
+    inset 0 0 5px rgba(139, 109, 30, 0.05);
+}
+
+.light-theme .sub-menu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  width: 200px;
+  background: rgba(244, 236, 216, 0.98);
+  background-image: 
+    linear-gradient(
+      rgba(244, 236, 216, 0.98),
+      rgba(238, 228, 204, 0.98)
+    ),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23paper)' opacity='0.05'/%3E%3C/svg%3E");
+  border: 1px solid rgba(139, 109, 30, 0.2);
+  border-radius: 4px;
+  padding: 15px;
+  box-shadow: 
+    0 5px 20px rgba(139, 109, 30, 0.15),
+    inset 0 0 10px rgba(139, 109, 30, 0.05);
+  backdrop-filter: blur(5px);
+  z-index: 10;
+}
+
+.light-theme .sub-menu h3 {
+  color: #2C4F2C;
+  font-family: "楷体", "KaiTi", serif;
+  font-size: 1.2em;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(139, 109, 30, 0.2);
+  text-align: center;
+  position: relative;
+}
+
+.light-theme .sub-menu h3::before,
+.light-theme .sub-menu h3::after {
+  content: '〜';
+  position: absolute;
+  top: 0;
+  color: rgba(139, 109, 30, 0.4);
+}
+
+.light-theme .sub-menu h3::before {
+  left: 20px;
+}
+
+.light-theme .sub-menu h3::after {
+  right: 20px;
+}
+
+.light-theme .sub-categories {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 0 10px;
+}
+
+.light-theme .sub-category {
+  font-family: "楷体", "KaiTi", serif;
+  color: #2C4F2C;
+  padding: 8px 15px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(139, 109, 30, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.light-theme .sub-category:hover {
+  color: #1B3B1B;
+  background: rgba(139, 109, 30, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 3px 10px rgba(139, 109, 30, 0.1),
+    inset 0 0 5px rgba(139, 109, 30, 0.05);
+  border-color: rgba(139, 109, 30, 0.4);
+}
+
+.light-theme .sub-category::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, rgba(139, 109, 30, 0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.light-theme .sub-category:hover::before {
+  transform: translateX(100%);
+}
+
+/* 商品区域样式 */
+.light-theme .products h2 {
+  font-family: "楷体", "KaiTi", serif;
+  color: #8B4513;
+  text-align: center;
+  font-size: 2em;
+  letter-spacing: 4px;
+  margin: 30px 0;
+  position: relative;
+}
+
+.light-theme .products h2::before,
+.light-theme .products h2::after {
+  content: '✦';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(139, 109, 30, 0.4);
+  font-size: 0.8em;
+}
+
+.light-theme .products h2::before {
+  left: 30%;
+}
+
+.light-theme .products h2::after {
+  right: 30%;
+}
+
+.light-theme .product-card {
+  background: rgba(244, 236, 216, 0.95);
+  border: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.light-theme .product-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(
+      rgba(244, 236, 216, 0.97),
+      rgba(238, 228, 204, 0.97)
+    ),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23paper)' opacity='0.05'/%3E%3C/svg%3E");
+  z-index: -1;
+}
+
+.light-theme .product-card::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid rgba(139, 109, 30, 0.2);
+  z-index: -1;
+}
+
+.light-theme .product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 10px 20px rgba(139, 109, 30, 0.15),
+    0 0 15px rgba(139, 109, 30, 0.1);
+}
+
+.light-theme .product-card:hover::after {
+  border-color: rgba(139, 109, 30, 0.4);
+}
+
+.light-theme .product-info {
+  padding: 15px;
+  position: relative;
+}
+
+.light-theme .product-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 109, 30, 0.2),
+    transparent
+  );
+}
+
+.light-theme .product-info h3 {
+  font-family: "楷体", "KaiTi", serif;
+  color: #8B4513;
+  font-size: 1.2em;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.light-theme .product-info p {
+  font-family: "楷体", "KaiTi", serif;
+  color: #A0522D;
+  text-align: center;
+  margin: 10px 0;
+  font-size: 1.1em;
+}
+
+.light-theme .product-info .el-button {
+  display: block;
+  width: 80%;
+  margin: 15px auto;
+  font-family: "楷体", "KaiTi", serif;
+  background: transparent;
+  border: 1px solid rgba(139, 109, 30, 0.3);
+  color: #8B4513;
+  transition: all 0.3s ease;
+}
+
+.light-theme .product-info .el-button:hover {
+  background: rgba(139, 109, 30, 0.1);
+  border-color: rgba(139, 109, 30, 0.5);
+  color: #A0522D;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 5px 15px rgba(139, 109, 30, 0.1),
+    inset 0 0 5px rgba(139, 109, 30, 0.05);
+}
+
+/* 商品图片容器 */
+.light-theme .product-card .image-container {
+  position: relative;
+  padding: 10px;
+  background: rgba(244, 236, 216, 0.8);
+}
+
+.light-theme .product-card img {
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(139, 109, 30, 0.1);
+}
+
+.light-theme .product-card:hover img {
+  transform: scale(1.02);
+  border-color: rgba(139, 109, 30, 0.3);
+}
+
+/* 装饰性角落 */
+.light-theme .product-card::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-top: 2px solid rgba(139, 109, 30, 0.2);
+  border-left: 2px solid rgba(139, 109, 30, 0.2);
+  top: 10px;
+  left: 10px;
+}
+
+.light-theme .product-card::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-bottom: 2px solid rgba(139, 109, 30, 0.2);
+  border-right: 2px solid rgba(139, 109, 30, 0.2);
+  bottom: 10px;
+  right: 10px;
+}
+
+.light-theme .search-container {
+  position: relative;
+  background: rgba(244, 236, 216, 0.95);
+  border: 1px solid rgba(139, 109, 30, 0.3);
+  border-radius: 4px;
+  padding: 2px;
+  box-shadow: 
+    0 5px 15px rgba(139, 109, 30, 0.1),
+    inset 0 0 10px rgba(139, 109, 30, 0.05);
+}
+
+.light-theme :deep(.el-input__wrapper) {
+  background: rgba(244, 236, 216, 0.95);
+  border: none;
+  box-shadow: none !important;
+}
+
+.light-theme :deep(.el-input__inner) {
+  color: #8B4513;
+  font-family: "楷体", "KaiTi", serif;
+  font-size: 1.1em;
+  letter-spacing: 1px;
+  &::placeholder {
+    color: rgba(139, 109, 30, 0.6);
+  }
+}
+
+.light-theme :deep(.el-input__prefix-inner) {
+  color: rgba(139, 109, 30, 0.6);
+}
+
+.light-theme .search-button {
+  background: transparent;
+  border: 1px solid rgba(139, 109, 30, 0.3);
+  color: #8B4513;
+  font-family: "楷体", "KaiTi", serif;
+  letter-spacing: 2px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1h38v38H1z' fill='none' stroke='%23698269' stroke-width='0.5' stroke-opacity='0.2' stroke-dasharray='2 2'/%3E%3C/svg%3E");
+    opacity: 0.2;
+    z-index: -1;
+  }
+}
+
+.light-theme .search-button:hover {
+  background: rgba(139, 109, 30, 0.1);
+  border-color: rgba(139, 109, 30, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 5px 15px rgba(139, 109, 30, 0.1),
+    inset 0 0 5px rgba(139, 109, 30, 0.05);
+}
+
+.light-theme .search-decoration {
+  display: none;
+}
+
+.light-theme .search-active {
+  border-color: rgba(139, 109, 30, 0.5);
+  box-shadow: 
+    0 5px 15px rgba(139, 109, 30, 0.15),
+    inset 0 0 10px rgba(139, 109, 30, 0.1);
+}
+
+/* 导航栏按钮样式 */
+.light-theme .nav-links {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.light-theme .nav-links :deep(.el-button) {
+  background: rgba(244, 236, 216, 0.95);
+  border: 1px solid rgba(139, 109, 30, 0.3);
+  color: #8B4513;
+  font-family: "楷体", "KaiTi", serif;
+  font-size: 1.1em;
+  letter-spacing: 2px;
+  padding: 8px 20px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1h38v38H1z' fill='none' stroke='%23698269' stroke-width='0.5' stroke-opacity='0.2' stroke-dasharray='2 2'/%3E%3C/svg%3E");
+    opacity: 0.2;
+    z-index: -1;
   }
 
-  .search-input {
-    max-width: 300px;
+  &:hover {
+    background: rgba(139, 109, 30, 0.1);
+    border-color: rgba(139, 109, 30, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 
+      0 5px 15px rgba(139, 109, 30, 0.1),
+       inset 0 0 5px rgba(139, 109, 30, 0.05);
   }
+}
+
+/* 为每个导航按钮添加独特的装饰 */
+.light-theme .nav-links :deep(.nav-home::after) {
+  content: '『家』';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.7em;
+  color: rgba(139, 109, 30, 0.4);
+}
+
+.light-theme .nav-links :deep(.nav-cart::after) {
+  content: '『市』';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.7em;
+  color: rgba(139, 109, 30, 0.4);
+}
+
+.light-theme .nav-links :deep(.nav-profile::after) {
+  content: '『我』';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.7em;
+  color: rgba(139, 109, 30, 0.4);
 }
 </style> 
