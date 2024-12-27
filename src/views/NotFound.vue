@@ -63,7 +63,7 @@ const goHome = () => {
   position: relative;
   width: 800px;
   height: 400px;
-  margin-top: -100px;
+  margin-top: -250px;
 }
 
 .container div, .container span {
@@ -74,19 +74,21 @@ const goHome = () => {
   position: absolute;
   width: 100%;
   text-align: center;
-  bottom: -80px;
+  bottom: 90px;
   color: #fff;
+  transform: translateY(100%);
 }
 
 .text-container h1 {
   font-size: 72px;
   margin: 0;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px;
 }
 
 .text-container p {
   font-size: 24px;
-  margin: 10px 0 20px;
+  margin: 0 0 25px;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
 }
 
@@ -109,7 +111,7 @@ const goHome = () => {
 .item {
   width: 200px;
   height: 200px;
-  bottom: 70px;
+  bottom: 190px;
   left: 50%;
   margin-left: -50px;
   transform-origin: center bottom;
@@ -204,11 +206,13 @@ const goHome = () => {
   box-shadow: 0 0 5px #37a45b;
   animation: shadow 0.7s ease-in-out infinite;
   animation-delay: 0.3s;
+  opacity: 0.7;
 }
 
 .item#pink {
   left: 44%;
   z-index: 30;
+  bottom: 210px;
 }
 
 .item#pink .chewing {
@@ -227,6 +231,7 @@ const goHome = () => {
   left: 31%;
   z-index: 20;
   transform: scale(1.1);
+  bottom: 200px;
 }
 
 .item#orange .chewing {
@@ -248,6 +253,7 @@ const goHome = () => {
   left: 64%;
   z-index: 20;
   transform: scale(1.4);
+  bottom: 220px;
 }
 
 .item#blue .chewing {
