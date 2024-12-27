@@ -89,7 +89,17 @@
     </section>
 
     <section class="products">
-      <h2>热销商品</h2>
+      <div class="title-container" :class="{ 'dark-mode': isDarkTheme }">
+        <h2>热销商品</h2>
+        <!-- 动态生成叶子 -->
+        <div v-if="!isDarkTheme" class="leaves-wrapper" ref="leavesWrapper">
+          <!-- 叶子会通过 JS 动态生成 -->
+        </div>
+        <!-- 闪电效果 -->
+        <template v-else>
+          <div class="lightning-extra"></div>
+        </template>
+      </div>
       <el-row :gutter="20">
         <el-col v-for="product in products" :key="product.id" :span="6">
           <el-card class="product-card">
@@ -113,6 +123,7 @@ import { Search } from '@element-plus/icons-vue'
 import ImageLoader from '@/components/ImageLoader.vue'
 import CyberText from '@/components/CyberText.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import ThemeAnimation from '@/components/ThemeAnimation.vue'
 
 const router = useRouter()
 const searchKeyword = ref('')
@@ -274,11 +285,68 @@ const handleSearchBlur = () => {
   isSearchFocused.value = false
 }
 
-const isDarkTheme = ref(true)
+const isDarkTheme = ref(false)
 
 const handleThemeChange = (isDark) => {
   isDarkTheme.value = isDark
 }
+
+// 叶子生成相关
+const leavesWrapper = ref(null)
+const leafTypes = ['🍂', '🍁']
+
+const createLeaf = () => {
+  const leaf = document.createElement('span')
+  leaf.className = 'leaf'
+  leaf.textContent = leafTypes[Math.floor(Math.random() * leafTypes.length)]
+  
+  const startY = Math.random() * 60
+  const size = 14 + Math.random() * 6
+  const duration = 4 + Math.random() * 2
+  
+  leaf.style.cssText = `
+    font-size: ${size}px;
+    position: absolute;
+    left: 100%;
+    top: ${startY}px;
+    opacity: 0.8;
+    animation: leafFloat ${duration}s linear forwards;
+    transform-origin: center;
+  `
+  
+  leaf.addEventListener('animationend', () => {
+    leaf.remove()
+  })
+  
+  return leaf
+}
+
+const generateLeaves = () => {
+  if (!leavesWrapper.value || isDarkTheme.value) return
+  
+  const count = 1 + Math.floor(Math.random() * 2)
+  
+  for (let i = 0; i < count; i++) {
+    const leaf = createLeaf()
+    leavesWrapper.value.appendChild(leaf)
+  }
+}
+
+let leafInterval
+
+onMounted(() => {
+  const startLeafGeneration = () => {
+    generateLeaves()
+    leafInterval = setTimeout(startLeafGeneration, 1000 + Math.random() * 1500)
+  }
+  startLeafGeneration()
+})
+
+onUnmounted(() => {
+  if (leafInterval) {
+    clearTimeout(leafInterval)
+  }
+})
 </script>
 
 <style scoped>
@@ -541,7 +609,13 @@ const handleThemeChange = (isDark) => {
 }
 
 .products {
-  margin-top: 20px;
+  position: relative;
+  padding-top: 20px; /* 为动画留出空间 */
+}
+
+.products h2 {
+  position: relative;
+  z-index: 1;
 }
 
 .product-card {
@@ -1332,5 +1406,276 @@ const handleThemeChange = (isDark) => {
   right: 2px;
   font-size: 0.7em;
   color: rgba(139, 109, 30, 0.4);
+}
+
+.title-container {
+  margin-bottom: 30px;
+  padding: 20px 0;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.title-container h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 28px;
+}
+
+/* 白天模式的叶子动画 */
+.light-theme .title-container::before {
+  content: '🍂';
+  position: absolute;
+  font-size: 20px;
+  color: #8B4513;
+  opacity: 0;
+  animation: customLeafFall 8s linear infinite;
+}
+
+.light-theme .title-container::after {
+  content: '🍂';
+  position: absolute;
+  font-size: 24px;
+  color: #8B4513;
+  opacity: 0;
+  animation: customLeafFall 8s linear infinite;
+  animation-delay: 4s;
+}
+
+.light-theme .title-container {
+  position: relative;
+}
+
+.light-theme .title-container .leaf {
+  position: absolute;
+  opacity: 0;
+  font-size: 20px;
+  content: '🍂';
+  animation: customLeafFall 8s linear infinite;
+}
+
+/* 为每片叶子设置不同的大小和延迟 */
+.light-theme .title-container .leaf:nth-child(1) {
+  font-size: 16px;
+  animation-delay: 0s;
+  right: 10%;
+}
+
+.light-theme .title-container .leaf:nth-child(2) {
+  font-size: 20px;
+  animation-delay: 1.5s;
+  right: 30%;
+}
+
+.light-theme .title-container .leaf:nth-child(3) {
+  font-size: 24px;
+  animation-delay: 3s;
+  right: 50%;
+}
+
+.light-theme .title-container .leaf:nth-child(4) {
+  font-size: 18px;
+  animation-delay: 4.5s;
+  right: 70%;
+}
+
+.light-theme .title-container .leaf:nth-child(5) {
+  font-size: 22px;
+  animation-delay: 6s;
+  right: 90%;
+}
+
+.light-theme .title-container .leaf:nth-child(6) {
+  font-size: 19px;
+  animation-delay: 7.5s;
+  right: 20%;
+}
+
+@keyframes leafFloat {
+  0% {
+    left: 100%;
+    transform: rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  50% {
+    left: 50%;
+    transform: rotate(180deg);
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    left: -10%;
+    transform: rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* 黑夜模式的闪电动画 */
+.dark-mode::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    transparent 20%,
+    rgba(255, 0, 255, 0.1) 45%,
+    rgba(0, 255, 255, 0.4) 48%,
+    rgba(255, 0, 255, 0.1) 51%,
+    transparent 80%,
+    transparent 100%
+  );
+  opacity: 0;
+  animation: horizontalFlash 3s infinite;
+  transform: translateX(-100%);
+}
+
+.dark-mode::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(0, 255, 255, 0.1) 45%,
+    rgba(255, 0, 255, 0.4) 48%,
+    rgba(0, 255, 255, 0.1) 51%,
+    transparent 70%,
+    transparent 100%
+  );
+  opacity: 0;
+  animation: horizontalFlash 3s infinite;
+  animation-delay: 1.5s;
+  transform: translateX(-100%);
+}
+
+@keyframes horizontalFlash {
+  0%, 100% { 
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  40% {
+    opacity: 1;
+    transform: translateX(0%);
+  }
+  45% {
+    opacity: 0;
+    transform: translateX(-20%);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(0%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* 添加额外的闪电效果 */
+.dark-mode .lightning-extra {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #FF00FF, #00FFFF);
+  opacity: 0;
+  animation: lightningPulse 3s infinite;
+  animation-delay: 0.5s;
+}
+
+@keyframes lightningPulse {
+  0%, 100% { 
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  50% { 
+    opacity: 0.6;
+    transform: scaleX(1);
+  }
+}
+
+/* 标题样式 */
+.light-theme .title-container {
+  background: rgba(244, 236, 216, 0.8);
+  border: 1px solid rgba(139, 109, 30, 0.2);
+  border-radius: 4px;
+  box-shadow: 
+    0 5px 15px rgba(139, 109, 30, 0.1),
+    inset 0 0 10px rgba(139, 109, 30, 0.05);
+}
+
+.light-theme .title-container h2 {
+  color: #8B4513;
+  font-family: "楷体", "KaiTi", serif;
+  letter-spacing: 4px;
+  text-shadow: 2px 2px 4px rgba(139, 109, 30, 0.1);
+}
+
+.dark-mode {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 0, 255, 0.2);
+  border-radius: 4px;
+  box-shadow: 
+    0 0 20px rgba(255, 0, 255, 0.1),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+.dark-mode h2 {
+  color: #fff;
+  text-shadow: 
+    0 0 10px rgba(255, 0, 255, 0.5),
+    0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.leaves-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.leaf {
+  position: absolute;
+  color: #8B4513;
+  pointer-events: none;
+  filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes leafFloat {
+  0% {
+    left: 100%;
+    transform: rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  50% {
+    left: 50%;
+    transform: rotate(180deg);
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    left: -10%;
+    transform: rotate(360deg);
+    opacity: 0;
+  }
 }
 </style> 
