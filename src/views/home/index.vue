@@ -25,7 +25,40 @@
         </el-input>
       </div>
       <nav class="nav-links">
-        <ThemeToggle v-model:isDark="isDarkTheme" />
+        <div class="theme-toggle-wrapper">
+          <button 
+            class="theme-toggle" 
+            :class="{ 'dark': isDarkTheme }"
+            @click="toggleTheme"
+          >
+            <!-- 白天模式图标 -->
+            <svg v-if="!isDarkTheme" class="sun-icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="5" class="sun-core"/>
+              <g class="sun-rays">
+                <line x1="12" y1="3" x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="21"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="3" y1="12" x2="5" y2="12"/>
+                <line x1="19" y1="12" x2="21" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </g>
+            </svg>
+            <!-- 黑夜模式图标 -->
+            <svg v-else class="cyber-moon" viewBox="0 0 24 24">
+              <path class="moon-body" d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/>
+              <g class="cyber-effects">
+                <path class="circuit-line" d="M17 4 L20 7"/>
+                <path class="circuit-line" d="M15 2 L18 5"/>
+                <path class="circuit-line" d="M19 9 L22 12"/>
+                <circle class="glow-point" cx="20" cy="7" r="1"/>
+                <circle class="glow-point" cx="18" cy="5" r="0.5"/>
+                <circle class="glow-point" cx="22" cy="12" r="0.8"/>
+              </g>
+            </svg>
+          </button>
+        </div>
         <el-button class="nav-home" @click="goToHome">首页</el-button>
         <el-button class="nav-cart" @click="goToCart">购物车</el-button>
         <el-button class="nav-profile" @click="goToProfile">个人中心</el-button>
@@ -539,6 +572,11 @@ watchEffect(() => {
     document.body.classList.remove('dark-theme')
   }
 })
+
+// 主题切换函数
+const toggleTheme = () => {
+  isDarkTheme.value = !isDarkTheme.value
+}
 </script>
 
 <style scoped>
@@ -2074,7 +2112,7 @@ watchEffect(() => {
   box-shadow: 0 0 15px rgba(255, 0, 255, 0.4);
 }
 
-/* 添加页面底部间距 */
+/* 添加页���底部间距 */
 .products {
   margin-bottom: 40px;
 }
@@ -2715,5 +2753,132 @@ watchEffect(() => {
 .mobile-categories :deep(.el-collapse-item) {
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+/* 主题切换按钮样式 */
+.theme-toggle-wrapper {
+  position: relative;
+  margin: 0 10px;
+}
+
+.theme-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+/* 白天模式图标样式 */
+.sun-icon {
+  width: 24px;
+  height: 24px;
+  stroke: #FFB100;
+  stroke-width: 2;
+  fill: none;
+  transition: all 0.3s ease;
+}
+
+.sun-core {
+  fill: #FFB100;
+}
+
+.sun-rays line {
+  stroke: #FFB100;
+  stroke-linecap: round;
+}
+
+.theme-toggle:hover .sun-icon {
+  transform: rotate(180deg);
+}
+
+/* 黑夜模式赛博朋克风格 */
+.cyber-moon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.moon-body {
+  fill: #00FFFF;
+  stroke: #FF00FF;
+  filter: drop-shadow(0 0 2px #00FFFF);
+}
+
+.cyber-effects {
+  opacity: 0.8;
+}
+
+.circuit-line {
+  stroke: #FF00FF;
+  stroke-width: 0.5;
+  stroke-dasharray: 4;
+  animation: circuitFlow 2s linear infinite;
+}
+
+.glow-point {
+  fill: #00FFFF;
+  filter: drop-shadow(0 0 2px #00FFFF);
+  animation: glowPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes circuitFlow {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* 主题切换动画 */
+.theme-toggle {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, 
+    rgba(255, 177, 0, 0.2) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.theme-toggle.dark::before {
+  background: radial-gradient(circle,
+    rgba(0, 255, 255, 0.2) 0%,
+    rgba(255, 0, 255, 0.1) 50%,
+    transparent 70%
+  );
+}
+
+.theme-toggle:hover::before {
+  opacity: 1;
 }
 </style> 
