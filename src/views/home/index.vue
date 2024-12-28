@@ -350,12 +350,15 @@ const debounce = (fn, delay) => {
 
 // 优化滚动处理
 const handleScroll = debounce(() => {
-  if (window.scrollY > 0) {
+  const scrollY = window.scrollY
+  const header = document.querySelector('.navbar')
+  
+  if (scrollY > 0) {
     isNavFixed.value = true
-    document.body.style.paddingTop = '60px'
+    header?.classList.add('navbar-fixed')
   } else {
     isNavFixed.value = false
-    document.body.style.paddingTop = '0'
+    header?.classList.remove('navbar-fixed')
   }
 }, 16)
 
@@ -559,7 +562,7 @@ watchEffect(() => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   width: 100%;
-  z-index: 40; /* 确保导航栏始终在最上层 */
+  z-index: 1000; /* 确保导航栏始终在最上层 */
   position: fixed;
   top: 0;
   left: 0;
@@ -2076,7 +2079,7 @@ watchEffect(() => {
   margin-bottom: 40px;
 }
 
-/* 优化商品网格布局 */
+/* 优��商品网格布局 */
 .el-row {
   margin: 0 -10px;
 }
@@ -2349,13 +2352,36 @@ watchEffect(() => {
 
 /* 确保内容不被固定导航栏遮挡 */
 .home-container {
-  padding-top: 60px;
+  padding-top: 0;
 }
 
 /* 移动端分类样式 */
 .mobile-categories {
   padding: 0;
-  margin-bottom: 20px;
+  margin: 60px 0 20px; /* 添加顶部边距，避免被导航栏遮挡 */
+}
+
+@media screen and (max-width: 768px) {
+  .categories {
+    margin-top: 0; /* 移除额外的顶部边距 */
+    padding: 10px;
+  }
+
+  /* 调整主内容区域在移动端的布局 */
+  .main-content {
+    padding-top: 60px; /* 为固定导航栏留出空间 */
+  }
+
+  /* 当导航栏不固定时，移除顶部内边距 */
+  .navbar:not(.navbar-fixed) + .main-content {
+    padding-top: 0;
+  }
+
+  /* 优化移动端的分类区域位置 */
+  .mobile-categories {
+    position: relative;
+    z-index: 10; /* 确保分类在适当的层级 */
+  }
 }
 
 /* 自定义折叠面板样式 */
