@@ -20,14 +20,23 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-const isDark = ref(true)
-const emit = defineEmits(['theme-change'])
+const props = defineProps({
+  isDark: Boolean
+})
+
+const emit = defineEmits(['update:isDark'])
+
+const isDark = ref(props.isDark)
+
+watch(() => props.isDark, (newVal) => {
+  isDark.value = newVal
+})
 
 const toggleTheme = () => {
   isDark.value = !isDark.value
-  emit('theme-change', isDark.value)
+  emit('update:isDark', isDark.value)
 }
 </script>
 
