@@ -34,9 +34,20 @@ export const register = async (userData) => {
       method: 'post',
       data: userData
     })
+    
+    if (response.state !== 200) {
+      throw new Error(response.message || '注册失败')
+    }
+    
     return response
   } catch (error) {
     console.error('Register error:', error)
-    throw error
+    if (error.response) {
+      throw new Error(error.response.data?.message || '注册失败')
+    } else if (error.request) {
+      throw new Error('网络请求失败，请检查网络连接')
+    } else {
+      throw new Error(error.message || '注册失败')
+    }
   }
 } 
