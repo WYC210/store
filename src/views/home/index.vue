@@ -148,7 +148,8 @@
       <div class="title-divider" :class="{ 'light': !isDarkTheme }">
         <span class="divider-text">热销商品</span>
       </div>
-      <el-row :gutter="20">
+      
+      <el-row v-loading="loading" :gutter="20">
         <el-col 
           v-for="product in products" 
           :key="product.id" 
@@ -157,12 +158,32 @@
           :md="8" 
           :lg="6"
         >
-          <el-card class="product-card">
-            <ImageLoader :src="product.image" alt="商品图片" />
+          <el-card class="product-card" :body-style="{ padding: '0px' }">
+            <div class="product-image">
+              <el-image 
+                :src="product.image" 
+                :alt="product.name"
+                fit="cover"
+                lazy
+              >
+                <template #placeholder>
+                  <div class="image-placeholder">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
             <div class="product-info">
               <h3>{{ product.name }}</h3>
-              <p>价格: ¥{{ product.price }}</p>
-              <el-button type="primary" @click="addToCart(product)">加入购物车</el-button>
+              <p class="price">¥{{ product.price.toFixed(2) }}</p>
+              <p class="description">{{ product.description }}</p>
+              <el-button 
+                type="primary" 
+                @click="handleAddToCart(product)"
+                :loading="loading"
+              >
+                加入购物车
+              </el-button>
             </div>
           </el-card>
         </el-col>
@@ -172,411 +193,114 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watchEffect, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Picture } from '@element-plus/icons-vue'
 import ImageLoader from '@/components/ImageLoader.vue'
 import CyberText from '@/components/CyberText.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
+import { getProducts, addToCart } from '@/api/product'
 
-// 添加 pendingOperations 的定义
-const pendingOperations = ref([])
+// 基础状态
 const router = useRouter()
+const userStore = useUserStore()
 const searchKeyword = ref('')
-const activeIndex = ref('0')
-const activeCategory = ref(null)
-// 从 localStorage 获取主题状态，如果没有则默认为 false
 const isDarkTheme = ref(localStorage.getItem('isDarkTheme') === 'true')
 const isNavFixed = ref(false)
 const isSearchFocused = ref(false)
 
-// 清理函数集合
-const cleanupFunctions = []
-
-// 分类数据
-const categories = ref([
-  {
-    name: '电子产品',
-    children: ['手机', '平板电脑', '笔记本电脑', '显示器', '智能手表', '耳机']
-  },
-  {
-    name: '服装',
-    children: ['上衣', '裤子', '裙子', '外套', '运动服', '内衣']
-  },
-  {
-    name: '家居用品',
-    children: ['床上用品', '厨房用具', '家具', '灯具', '收纳用品']
-  },
-  {
-    name: '运动器材',
-    children: ['跑步机', '哑铃', '瑜伽垫', '篮球', '羽毛球']
+// 简单的防抖函数
+const debounce = (fn, delay) => {
+  let timer = null
+  return (...args) => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), delay)
   }
-])
-
-let timeoutId = null
-
-// 处理鼠标悬停主菜单
-const handleMouseEnter = (category) => {
-  if (window.innerWidth <= 768) return
-  if (timeoutId) {
-    clearTimeout(timeoutId)
-  }
-  activeCategory.value = category
 }
 
-// 处理鼠标离开主菜单
-const handleMenuLeave = () => {
-  timeoutId = setTimeout(() => {
-    if (!isSubmenuHovered.value) {
-      activeCategory.value = null
-    }
-  }, 100)
+// 滚动处理
+const handleScroll = debounce(() => {
+  isNavFixed.value = window.scrollY > 0
+}, 16)
+
+// 搜索处理
+const handleSearch = debounce(() => {
+  console.log('Searching:', searchKeyword.value)
+}, 300)
+
+// 主题切换
+const toggleTheme = () => {
+  isDarkTheme.value = !isDarkTheme.value
+  localStorage.setItem('isDarkTheme', isDarkTheme.value)
+  document.body.classList.toggle('dark-theme', isDarkTheme.value)
 }
 
-// 跟踪二级菜单是否被悬停
-const isSubmenuHovered = ref(false)
-
-// 处理鼠标进入二级菜单
-const handleSubmenuEnter = () => {
-  if (timeoutId) {
-    clearTimeout(timeoutId)
-  }
-  isSubmenuHovered.value = true
-}
-
-// 处理鼠标离开二级菜单
-const handleSubmenuLeave = () => {
-  isSubmenuHovered.value = false
-  timeoutId = setTimeout(() => {
-    activeCategory.value = null
-  }, 200)
-}
-
-// 处理点击二级分类
-const handleSubCategoryClick = (subCategory) => {
-  console.log('选择的子分类:', subCategory)
-  // 这里可以添加跳转到对应分类页面的逻辑
-  router.push({
-    path: '/products',
-    query: { category: subCategory }
-  })
-}
-
-const carouselItems = ref([
-  { 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%201.jpg'
-  },
-  { 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%202.jpg'
-  },
-  { 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%203.jpg'
-  }
-])
-
-const products = ref([
-  { 
-    id: 1, 
-    name: '智能手机', 
-    price: 2999, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%204.jpg'
-  },
-  { 
-    id: 2, 
-    name: '运动鞋', 
-    price: 799, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%205.jpg'
-  },
-  { 
-    id: 3, 
-    name: '咖啡机', 
-    price: 1299, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%206.jpg'
-  },
-  { 
-    id: 4, 
-    name: '无线耳机', 
-    price: 999, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%207.jpg'
-  },
-  { 
-    id: 5, 
-    name: '游戏主机', 
-    price: 3999, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%208.jpg'
-  },
-  { 
-    id: 6, 
-    name: '机械键盘', 
-    price: 599, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%209.jpg'
-  },
-  { 
-    id: 7, 
-    name: '电竞显示器', 
-    price: 2499, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%2010.jpg'
-  },
-  { 
-    id: 8, 
-    name: '智能手表', 
-    price: 1599, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%2011.jpg'
-  },
-  { 
-    id: 9, 
-    name: '电动牙刷', 
-    price: 299, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%2012.jpg'
-  },
-  { 
-    id: 10, 
-    name: '蓝牙音箱', 
-    price: 499, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%2013.jpg'
-  },
-  { 
-    id: 11, 
-    name: '平板电脑', 
-    price: 3299, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%2014.jpg'
-  },
-  { 
-    id: 12, 
-    name: '智能门锁', 
-    price: 899, 
-    image: 'https://raw.githubusercontent.com/microsoft/wallpapers/main/Cyberpunk_Dreams/Cyberpunk%20Dreams%2015.jpg'
-  }
-])
-
-const addToCart = (product) => {
-  console.log(`添加到购物车: ${product.name}`)
-}
-
-const goToHome = () => {
-  router.push('/home')
-}
-
-const goToProducts = () => {
-  router.push('/products')
-}
-
-const goToCart = () => {
-  router.push('/cart')
-}
-
+// 导航
+const goToHome = () => router.push('/home')
+const goToProducts = () => router.push('/products')
+const goToCart = () => router.push('/cart')
 const goToProfile = () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push({
+      path: '/login',
+      query: { redirect: '/profile' }  // 登录后跳回个人中心
+    })
+    return
+  }
   router.push('/profile')
 }
 
-// 性能优化：使用防抖处理滚动和调整大小事件
-const debounce = (fn, delay) => {
-  let timer = null
-  return function (...args) {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => {
-      fn.apply(this, args)
-      timer = null
-    }, delay)
+// 商品数据
+const products = ref([])
+const loading = ref(false)
+
+// 获取商品列表
+const fetchProducts = async () => {
+  try {
+    loading.value = true
+    const response = await getProducts()
+    products.value = response.data
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+    ElMessage.error('获取商品列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
-// 优化滚动处理
-const handleScroll = debounce(() => {
-  const scrollY = window.scrollY
-  const header = document.querySelector('.navbar')
-  
-  if (scrollY > 0) {
-    isNavFixed.value = true
-    header?.classList.add('navbar-fixed')
-  } else {
-    isNavFixed.value = false
-    header?.classList.remove('navbar-fixed')
-  }
-}, 16)
-
-// 优化窗口大小变化处理
-const checkMobileView = debounce(() => {
-  isMobileView.value = window.innerWidth <= 768
-}, 100)
-
-// 优化动画性能
-const optimizeAnimations = () => {
-  const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const styleSheet = document.createElement('style')
-  if (isReducedMotion) {
-    styleSheet.textContent = `
-      * {
-        animation-duration: 0.001ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.001ms !important;
-      }
-    `
-    document.head.appendChild(styleSheet)
-  }
-  return () => styleSheet.remove()
-}
-
-// 图片懒加载优化
-const observeImages = () => {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const img = entry.target
-        img.src = img.dataset.src
-        observer.unobserve(img)
-      }
-    })
-  }, {
-    rootMargin: '50px'
-  })
-  
-  return observer
-}
-
-onMounted(() => {
-  // 使用 nextTick 确保 DOM 已更新
-  nextTick(() => {
-    // 添加滚动监听
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    window.addEventListener('resize', checkMobileView, { passive: true })
-    
-    // 初始化动画优化
-    const cleanupAnimation = optimizeAnimations()
-    
-    // 初始化图片懒加载
-    const imageObserver = observeImages()
-    document.querySelectorAll('img[data-src]').forEach(img => {
-      imageObserver.observe(img)
-    })
-    
-    cleanupFunctions.push(() => {
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', checkMobileView)
-      cleanupAnimation()
-      imageObserver.disconnect()
-    })
-  })
-
-  // 初始化时同步一次主题
-  if (isDarkTheme.value) {
-    document.body.classList.add('dark-theme')
-  }
-})
-
-onUnmounted(() => {
-  // 清理所有定时器和监听器
-  if (searchTimeout.value) {
-    clearTimeout(searchTimeout.value)
-    searchTimeout.value = null
-  }
-  
-  if (timeoutId) {
-    clearTimeout(timeoutId)
-    timeoutId = null
-  }
-  
-  // 清理所有异步操作
-  Promise.all(pendingOperations.value)
-    .catch(error => console.error('Cleanup error:', error))
-    .finally(() => {
-      pendingOperations.value = []
-      document.body.style.paddingTop = '0'
-      document.body.classList.remove('dark-theme')
-      
-      // 执行所有清理函数
-      cleanupFunctions.forEach(cleanup => {
-        try {
-          cleanup()
-        } catch (error) {
-          console.error('Cleanup error:', error)
-        }
-      })
-      cleanupFunctions.length = 0
-    })
-})
-
-// 优化事件处理函数
-const handleSearchFocus = () => {
-  isSearchFocused.value = true
-}
-
-const handleSearchBlur = () => {
-  isSearchFocused.value = false
-}
-
-// 使用防抖处理搜索
-const searchTimeout = ref(null)
-const handleSearch = () => {
-  if (searchTimeout.value) {
-    clearTimeout(searchTimeout.value)
-  }
-  
-  const promise = new Promise(resolve => {
-    searchTimeout.value = setTimeout(() => {
-      // 处理搜索逻辑
-      searchTimeout.value = null
-      resolve()
-    }, 300)
-  })
-  
-  pendingOperations.value.push(promise)
-}
-
-// 清理定时器
-onUnmounted(() => {
-  // 取消所有定时器
-  if (searchTimeout.value) {
-    clearTimeout(searchTimeout.value)
-  }
-  if (timeoutId) {
-    clearTimeout(timeoutId)
-  }
-
-  // 等待所有未完成的操作
-  Promise.all(pendingOperations.value)
-    .catch(error => console.error('Cleanup error:', error))
-    .finally(() => {
-      // 清理样式和事件监听
-      document.body.style.paddingTop = '0'
-      cleanupFunctions.forEach(cleanup => cleanup())
-      pendingOperations.value = []
-    })
-})
-
-// 添加点击处理函数
-const handleCategoryClick = (category) => {
-  // 在移动端，点击时切换显示状态
-  if (window.innerWidth <= 768) {
-    if (activeCategory.value === category) {
-      // 如果点击的是当前激活的分类，则关闭菜单
-      activeCategory.value = null
-    } else {
-      // 否则显示新点击的分类的菜单
-      activeCategory.value = category
+// 购物车操作
+const handleAddToCart = async (product) => {
+  try {
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
     }
+
+    await addToCart(product.id)
+    ElMessage.success('已添加到购物车')
+  } catch (error) {
+    console.error('添加到购物车失败:', error)
+    ElMessage.error('添加失败，请重试')
   }
 }
 
-// 检测是否为移动端视图
-const isMobileView = ref(false)
-const activeCollapse = ref([]) // 控制折叠面板的展开状态
-
-// 监听主题变化并保存到 localStorage
-watchEffect(() => {
-  localStorage.setItem('isDarkTheme', isDarkTheme.value)
-  // 可选：同步更新 body 的类名，用于全局样式
-  if (isDarkTheme.value) {
-    document.body.classList.add('dark-theme')
-  } else {
-    document.body.classList.remove('dark-theme')
-  }
+// 生命周期钩子
+onMounted(async () => {
+  await fetchProducts()
 })
 
-// 主题切换函数
-const toggleTheme = () => {
-  isDarkTheme.value = !isDarkTheme.value
-}
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+// 主题监听
+watchEffect(() => {
+  document.body.classList.toggle('dark-theme', isDarkTheme.value)
+})
 </script>
 
 <style scoped>
@@ -685,7 +409,7 @@ const toggleTheme = () => {
   padding: 20px;
   height: 400px;
   position: relative;
-  z-index: 20; /* 确保分类区域在导航栏下方但高于其他内容 */
+  z-index: 20; /* 确保分类区域在���航栏下方但高于其他内容 */
 }
 
 .category-menu {
@@ -2159,7 +1883,7 @@ const toggleTheme = () => {
     height: auto;
     margin-bottom: 20px;
     padding: 15px;
-    margin-top: 60px; /* 为固定导航栏留出空间 */
+    margin-top: 60px; /* 为固定导航栏留出��间 */
   }
 
   .sub-menu {
@@ -2880,5 +2604,113 @@ const toggleTheme = () => {
 
 .theme-toggle:hover::before {
   opacity: 1;
+}
+
+/* 商品卡片样式 */
+.product-card {
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+}
+
+.product-info {
+  padding: 15px;
+}
+
+.product-info h3 {
+  margin: 0 0 10px;
+  font-size: 1.1em;
+  color: #fff;
+}
+
+.product-info p {
+  margin: 0 0 15px;
+  color: #4ECDC4;
+}
+
+/* 商品网格布局 */
+.products {
+  margin-top: 40px;
+}
+
+.title-divider {
+  text-align: center;
+  margin: 30px 0;
+  position: relative;
+}
+
+.title-divider::before,
+.title-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+}
+
+.title-divider::before {
+  left: 0;
+}
+
+.title-divider::after {
+  right: 0;
+  transform: rotate(180deg);
+}
+
+.divider-text {
+  background: #0B0B2B;
+  padding: 0 20px;
+  color: #4ECDC4;
+  font-size: 1.2em;
+}
+
+/* 响应式布局 */
+@media screen and (max-width: 768px) {
+  .product-card {
+    margin: 10px;
+  }
+  
+  .title-divider::before,
+  .title-divider::after {
+    width: 20%;
+  }
+}
+
+.product-image {
+  height: 200px;
+  overflow: hidden;
+}
+
+.image-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.price {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #FF6B6B;
+}
+
+.description {
+  color: #999;
+  font-size: 0.9em;
+  margin: 10px 0;
+  height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 </style> 

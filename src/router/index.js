@@ -92,12 +92,37 @@ const routes = [
         next('/login')
       }
     }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/profile/index.vue'),
+    meta: { 
+      requiresAuth: true  // 需要登录才能访问
+    }
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!token) {
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
+    } else {
+      next()
+    }
+  } else {
+    next()
+  }
 })
 
 export default router 

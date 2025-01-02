@@ -21,15 +21,16 @@
       </div>
       
       <el-form 
-        :model="authStore.formState" 
+        :model="formData" 
         :rules="rules" 
         ref="loginFormRef" 
         class="login-form">
         <el-form-item prop="username">
           <el-input 
-            v-model="authStore.formState.username"
+            v-model="formData.username"
             placeholder="请输入用户名"
-            size="large">
+            size="large"
+          >
             <template #prefix>
               <el-icon><User /></el-icon>
             </template>
@@ -38,11 +39,12 @@
         
         <el-form-item prop="password">
           <el-input 
-            v-model="authStore.formState.password"
+            v-model="formData.password"
             type="password"
             placeholder="请输入密码"
             size="large"
-            show-password>
+            show-password
+          >
             <template #prefix>
               <el-icon><Lock /></el-icon>
             </template>
@@ -50,7 +52,7 @@
         </el-form-item>
 
         <div class="remember-forgot">
-          <el-checkbox v-model="authStore.formState.remember">记住我</el-checkbox>
+          <el-checkbox v-model="rememberMe">记住我</el-checkbox>
           <el-link type="primary" :underline="false">忘记密码？</el-link>
         </div>
 
@@ -91,57 +93,62 @@
   </div>
 </template>
 
-<script>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/store/auth'
-import { useAnimation } from '@/composables/useAnimationManager'
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { User, Lock, WechatFilled, Apple, ChromeFilled } from '@element-plus/icons-vue'
 
-export default {
-  name: 'Login',
+const userStore = useUserStore()
+const router = useRouter()
+const route = useRoute()
+const loading = ref(false)
+const loginFormRef = ref(null)
+const rememberMe = ref(false)
+const containerRef = ref(null)
+const logoRef = ref(null)
+
+const formData = ref({
+  username: '',
+  password: ''
+})
+
+const rules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
+  ]
+}
+
+const handleLogin = async () => {
+  if (!loginFormRef.value) return
   
-  setup() {
-    const router = useRouter()
-    const authStore = useAuthStore()
-    const containerRef = ref(null)
-    const logoRef = ref(null)
-    const loginFormRef = ref(null)
-
-    // 使用动画管理器
-    const animationManager = useAnimation(logoRef)
-
-    // 登录处理
-    const handleLogin = async () => {
-      try {
-        await loginFormRef.value.validate()
-        const formData = new FormData()
-        formData.append('username', authStore.formState.username)
-        formData.append('password', authStore.formState.password)
-        
-        const success = await authStore.login(formData)
-        if (success) {
-          router.push('/home')
-        }
-      } catch (error) {
-        console.error('Login validation failed:', error)
-      }
+  try {
+    loading.value = true
+    await loginFormRef.value.validate()
+    
+    console.log('Login data:', formData.value)
+    
+    const response = await userStore.login(formData.value)
+    if (response.state === 200) {
+      ElMessage.success('登录成功')
+      const redirect = route.query.redirect || '/home'
+      router.push(redirect)
     }
-
-    return {
-      authStore,
-      loginFormRef,
-      containerRef,
-      logoRef,
-      handleLogin,
-      rules: {
-        username: [
-          { required: true, message: '请输入用户名', trigger: 'blur' }
-        ],
-        password: [
-          { required: true, message: '请输入密码', trigger: 'blur' }
-        ]
-      }
-    }
+  } catch (error) {
+    console.error('Login failed:', error)
+    // 显示具体的错误信息
+    ElMessage.error({
+      message: error.message || '登录失败，请检查用户名和密码',
+      duration: 3000
+    })
+  } finally {
+    loading.value = false
   }
 }
 </script>
