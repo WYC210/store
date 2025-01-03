@@ -9,19 +9,30 @@ const routes = [
     redirect: '/home'
   },
   {
+    path: '/home',
+    name: 'Home',
+    component: Home,
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/auth/Login.vue')
+    component: () => import('@/views/auth/Login.vue'),
+    meta: { requiresAuth: false }
   },
   {
     path: '/register',
     name: 'Register',
-    component: () => import('@/views/auth/Register.vue')
+    component: () => import('@/views/auth/Register.vue'),
+    meta: { requiresAuth: false }
   },
   {
-    path: '/home',
-    name: 'Home',
-    component: Home
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/profile/index.vue'),
+    meta: { 
+      requiresAuth: true
+    }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -92,14 +103,6 @@ const routes = [
         next('/login')
       }
     }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/profile/index.vue'),
-    meta: { 
-      requiresAuth: true  // 需要登录才能访问
-    }
   }
 ]
 
@@ -109,10 +112,18 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  
+  // 进入登录或注册页面时，清除之前的登录信息
+  if (to.path === '/login' || to.path === '/register') {
+    localStorage.removeItem('token')
+    next()
+    return
+  }
+
+  // 验证需要登录的页面
   if (to.matched.some(record => record.meta.requiresAuth)) {
+    const token = localStorage.getItem('token')
     if (!token) {
+      ElMessage.warning('请先登录')
       next({
         path: '/login',
         query: { redirect: to.fullPath }

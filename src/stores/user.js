@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { login } from '@/utils/auth'
+import { login, getUserInfo } from '@/utils/auth'
 import router from '@/router'
 
 export const useUserStore = defineStore('user', {
@@ -14,6 +14,11 @@ export const useUserStore = defineStore('user', {
   
   actions: {
     setToken(token) {
+      if (!token) {
+        console.error('Token is empty')
+        return
+      }
+      console.log('Setting token:', token) // 调试用
       this.token = token
       localStorage.setItem('token', token)
     },
@@ -29,9 +34,19 @@ export const useUserStore = defineStore('user', {
           password: userData.password
         })
         
+        console.log('登录响应:', response)
+        
         if (response.state === 200 && response.data) {
-          this.setToken(response.data.token)
-          this.setUserInfo(response.data)
+          const token = response.data.token
+          console.log('保存 token:', token) // 调试用
+          
+          this.setToken(token)
+          
+          this.setUserInfo({
+            uid: response.data.uid,
+            username: response.data.username,
+            avatar: response.data.avatar
+          })
           return response
         } else {
           throw new Error(response.message || '登录失败')
@@ -50,6 +65,32 @@ export const useUserStore = defineStore('user', {
         router.push('/login')
       } catch (error) {
         console.error('Logout error:', error)
+        throw error
+      }
+    },
+    
+    async validateToken() {
+      try {
+        if (!this.token) {
+          throw new Error('未登录')
+        }
+        
+        const response = await getUserInfo()
+        console.log('验证响应:', response)
+        
+        if (response.state === 200 && response.data) {
+          this.setUserInfo(response.data)
+          return response
+        } else {
+          this.token = ''
+          this.userInfo = null
+          localStorage.removeItem('token')
+          throw new Error(response.message || '验证失败')
+        }
+      } catch (error) {
+        this.token = ''
+        this.userInfo = null
+        localStorage.removeItem('token')
         throw error
       }
     }

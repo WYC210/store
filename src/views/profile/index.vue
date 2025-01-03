@@ -38,13 +38,15 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const loading = ref(false)
 
 // 格式化日期
 const formatDate = (date) => {
@@ -69,12 +71,34 @@ const handleLogout = async () => {
   }
 }
 
-// 检查登录状态
-onMounted(() => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
+// 检查登录状态并获取用户信息
+const checkAuth = async () => {
+  try {
+    loading.value = true
+    // 先验证本地是否有 token
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('未登录')
+    }
+
+    // 验证 token 并获取用户信息
+    const response = await userStore.validateToken()
+    if (!response || response.state !== 200) {
+      throw new Error('验证失败')
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error)
+    localStorage.removeItem('token')
+    ElMessage.warning('请重新登录')
     router.push('/login')
+  } finally {
+    loading.value = false
   }
+}
+
+// 在组件挂载时立即验证
+onMounted(async () => {
+  await checkAuth()
 })
 </script>
 
