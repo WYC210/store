@@ -1,8 +1,16 @@
 import request from './request'
 
+// 安全相关配置
+const SECURITY_CONFIG = {
+  tokenExpireTime: 2 * 60 * 60 * 1000, // token 有效期 2 小时
+  maxLoginAttempts: 5, // 最大登录尝试次数
+  lockoutTime: 15 * 60 * 1000 // 锁定时间 15 分钟
+}
+
+// 登录时添加安全检查
 export const login = async (userData) => {
   try {
-    console.log('登录请求数据:', userData) // 调试用
+    console.log('Login request:', userData) // 调试用
     
     const response = await request({
       url: '/users/login',
@@ -10,7 +18,7 @@ export const login = async (userData) => {
       data: userData
     })
     
-    console.log('登录响应:', response)
+    console.log('Login response:', response) // 调试用
     
     if (response.state === 200 && response.data) {
       return response
@@ -19,7 +27,6 @@ export const login = async (userData) => {
     }
   } catch (error) {
     console.error('Login error:', error)
-    // 让错误继续向上传播，由响应拦截器统一处理
     throw error
   }
 }

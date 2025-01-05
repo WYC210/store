@@ -126,27 +126,22 @@ const rules = {
 }
 
 const handleLogin = async () => {
-  if (!loginFormRef.value) return
-  
   try {
     loading.value = true
-    await loginFormRef.value.validate()
-    
-    console.log('Login data:', formData.value)
-    
     const response = await userStore.login(formData.value)
+    
     if (response.state === 200) {
       ElMessage.success('登录成功')
+      // 确保 cookie 已经设置完成
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // 登录成功后跳转
       const redirect = route.query.redirect || '/home'
-      router.push(redirect)
+      await router.push(redirect)
     }
   } catch (error) {
-    console.error('Login failed:', error)
-    // 显示具体的错误信息
-    ElMessage.error({
-      message: error.message || '登录失败，请检查用户名和密码',
-      duration: 3000
-    })
+    console.error('Login error:', error)
+    ElMessage.error(error.message || '登录失败')
   } finally {
     loading.value = false
   }

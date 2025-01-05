@@ -42,6 +42,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { getCookie, removeCookie } from '@/utils/cookie'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -76,7 +77,7 @@ const checkAuth = async () => {
   try {
     loading.value = true
     // 先验证本地是否有 token
-    const token = localStorage.getItem('token')
+    const token = getCookie('token')
     if (!token) {
       throw new Error('未登录')
     }
@@ -88,7 +89,7 @@ const checkAuth = async () => {
     }
   } catch (error) {
     console.error('Auth check failed:', error)
-    localStorage.removeItem('token')
+    removeCookie('token')
     ElMessage.warning('请重新登录')
     router.push('/login')
   } finally {

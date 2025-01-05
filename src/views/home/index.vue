@@ -211,24 +211,28 @@ const isDarkTheme = ref(localStorage.getItem('isDarkTheme') === 'true')
 const isNavFixed = ref(false)
 const isSearchFocused = ref(false)
 
-// 简单的防抖函数
-const debounce = (fn, delay) => {
-  let timer = null
+const timers = {
+  scroll: null,
+  search: null
+}
+
+// 防抖函数
+const debounce = (fn, delay, timerKey) => {
   return (...args) => {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => fn(...args), delay)
+    if (timers[timerKey]) clearTimeout(timers[timerKey])
+    timers[timerKey] = setTimeout(() => fn(...args), delay)
   }
 }
 
 // 滚动处理
 const handleScroll = debounce(() => {
   isNavFixed.value = window.scrollY > 0
-}, 16)
+}, 16, 'scroll')
 
 // 搜索处理
 const handleSearch = debounce(() => {
   console.log('Searching:', searchKeyword.value)
-}, 300)
+}, 300, 'search')
 
 // 主题切换
 const toggleTheme = () => {
@@ -294,6 +298,12 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  // 清理所有定时器
+  Object.values(timers).forEach(timer => {
+    if (timer) clearTimeout(timer)
+  })
+  
+  // 移除事件监听
   window.removeEventListener('scroll', handleScroll)
 })
 

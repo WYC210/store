@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import Home from '@/views/home/index.vue'
 import NotFound from '@/views/NotFound.vue'
 import Admin from '@/views/admin/index.vue'
+import { getCookie, removeCookie } from '@/utils/cookie'
 
 const routes = [
   {
@@ -114,14 +116,14 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // 进入登录或注册页面时，清除之前的登录信息
   if (to.path === '/login' || to.path === '/register') {
-    localStorage.removeItem('token')
+    removeCookie('token')
     next()
     return
   }
 
   // 验证需要登录的页面
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    const token = localStorage.getItem('token')
+    const token = getCookie('token')
     if (!token) {
       ElMessage.warning('请先登录')
       next({
