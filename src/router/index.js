@@ -114,9 +114,8 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // 进入登录或注册页面时，清除之前的登录信息
+  // 进入登录或注册页面时
   if (to.path === '/login' || to.path === '/register') {
-    removeCookie('token')
     next()
     return
   }
@@ -127,8 +126,7 @@ router.beforeEach((to, from, next) => {
     if (!token) {
       ElMessage.warning('请先登录')
       next({
-        path: '/login',
-        query: { redirect: to.fullPath }
+        path: '/login'
       })
     } else {
       next()

@@ -101,11 +101,11 @@
                 :default-active="activeIndex"
               >
                 <el-menu-item 
-                  v-for="(category, index) in categories" 
-                  :key="index"
-                  :index="String(index)"
+                  v-for="category in categories" 
+                  :key="category.categoryId"
+                  :index="String(category.categoryId)"
                   @mouseenter="handleMouseEnter(category)"
-                  @mouseleave="handleMenuLeave"
+                  @mouseleave="handleMenuItemLeave"
                   @click="handleCategoryClick(category)"
                 >
                   {{ category.name }}
@@ -118,16 +118,17 @@
               v-show="activeCategory"
               @mouseenter="handleSubmenuEnter"
               @mouseleave="handleSubmenuLeave"
+              v-if="activeCategory?.children?.length"
             >
               <h3>{{ activeCategory?.name }}</h3>
               <div class="sub-categories">
                 <span 
-                  v-for="(subCategory, index) in activeCategory?.children" 
-                  :key="index"
+                  v-for="subCategory in activeCategory?.children" 
+                  :key="subCategory.categoryId"
                   class="sub-category"
                   @click="handleSubCategoryClick(subCategory)"
                 >
-                  {{ subCategory }}
+                  {{ subCategory.name }}
                 </span>
               </div>
             </div>
@@ -193,7 +194,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watchEffect } from 'vue'
+import { ref, onMounted, onUnmounted, watchEffect, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Picture } from '@element-plus/icons-vue'
 import ImageLoader from '@/components/ImageLoader.vue'
@@ -201,7 +202,7 @@ import CyberText from '@/components/CyberText.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { getProducts, addToCart } from '@/api/product'
+import { getProducts, addToCart, getCategories } from '@/api/product'
 
 // 基础状态
 const router = useRouter()
@@ -231,7 +232,12 @@ const handleScroll = debounce(() => {
 
 // 搜索处理
 const handleSearch = debounce(() => {
-  console.log('Searching:', searchKeyword.value)
+  productParams.value = {
+    ...productParams.value,
+    keyword: searchKeyword.value,
+    page: 1 // 搜索时重置页码
+  }
+  fetchProducts()
 }, 300, 'search')
 
 // 主题切换
@@ -259,20 +265,92 @@ const goToProfile = () => {
 
 // 商品数据
 const products = ref([])
+const productParams = ref({
+  page: 1,
+  size: 10
+})
+const total = ref(0)
 const loading = ref(false)
+
+// 轮播图数据
+const carouselItems = ref([])
+
+// 分类数据
+const categories = ref([])
+const activeCategory = ref(null)
+const activeIndex = ref('0')
 
 // 获取商品列表
 const fetchProducts = async () => {
   try {
     loading.value = true
-    const response = await getProducts()
-    products.value = response.data
+    const response = await getProducts(productParams.value)
+    if (response.state === 200) {
+      products.value = response.data.list
+      total.value = response.data.total
+      
+      // 从商品列表中随机选择3-4个商品作为轮播图
+      const count = Math.floor(Math.random() * 2) + 3 // 随机3或4个
+      carouselItems.value = shuffleArray([...products.value])
+        .slice(0, count)
+        .map(product => ({
+          image: product.imageUrl,
+          title: product.name,
+          link: `/product/${product.productId}`
+        }))
+    }
   } catch (error) {
     console.error('获取商品列表失败:', error)
-    ElMessage.error('获取商品列表失败')
   } finally {
     loading.value = false
   }
+}
+
+// 获取分类列表
+const fetchCategories = async () => {
+  try {
+    const response = await getCategories()
+    if (response.state === 200) {
+      categories.value = response.data
+      console.log('Categories:', categories.value) // 调试用
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
+
+// 分类相关处理
+const handleMouseEnter = (category) => {
+  activeCategory.value = category
+}
+
+// 菜单项离开处理
+const handleMenuItemLeave = () => {
+  // 使用 nextTick 确保 DOM 更新
+  nextTick(() => {
+    const submenu = document.querySelector('.sub-menu')
+    if (!submenu?.matches(':hover')) {
+      activeCategory.value = null
+    }
+  })
+}
+
+const handleSubmenuEnter = () => {
+  if (!activeCategory.value) return
+  clearTimeout(activeCategory.value._timer)
+}
+
+const handleSubmenuLeave = () => {
+  activeCategory.value = null
+}
+
+// 数组随机排序函数
+const shuffleArray = (array) => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]]
+  }
+  return array
 }
 
 // 购物车操作
@@ -295,6 +373,7 @@ const handleAddToCart = async (product) => {
 // 生命周期钩子
 onMounted(async () => {
   await fetchProducts()
+  await fetchCategories()
 })
 
 onUnmounted(() => {
@@ -311,6 +390,26 @@ onUnmounted(() => {
 watchEffect(() => {
   document.body.classList.toggle('dark-theme', isDarkTheme.value)
 })
+
+// 分类点击处理
+const handleCategoryClick = (category) => {
+  productParams.value = {
+    ...productParams.value,
+    categoryId: category.categoryId,
+    page: 1
+  }
+  fetchProducts()
+}
+
+// 子分类点击处理
+const handleSubCategoryClick = (subCategory) => {
+  productParams.value = {
+    ...productParams.value,
+    categoryId: subCategory.categoryId,
+    page: 1
+  }
+  fetchProducts()
+}
 </script>
 
 <style scoped>
@@ -454,7 +553,11 @@ watchEffect(() => {
   width: 200px;
   padding: 15px;
   border-radius: 4px;
-  z-index: 30; /* 确保二级菜单显示在最上层 */
+  z-index: 30;
+  background: rgba(13, 13, 48, 0.95);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @keyframes hologramAppear {
@@ -511,21 +614,15 @@ watchEffect(() => {
 
 .sub-category {
   padding: 5px 10px;
-  background: rgba(0, 255, 255, 0.1);
-  border: 1px solid rgba(0, 255, 255, 0.3);
-  border-radius: 4px;
-  font-size: 14px;
-  color: #fff;
-  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
   cursor: pointer;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
   transition: all 0.3s;
-  user-select: none;
 }
 
 .sub-category:hover {
   background: rgba(0, 255, 255, 0.2);
-  transform: scale(1.05);
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+  transform: translateY(-2px);
 }
 
 .el-menu-item {
@@ -934,21 +1031,13 @@ watchEffect(() => {
   left: 100%;
   top: 0;
   width: 200px;
-  background: rgba(244, 236, 216, 0.98);
-  background-image: 
-    linear-gradient(
-      rgba(244, 236, 216, 0.98),
-      rgba(238, 228, 204, 0.98)
-    ),
-    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.4' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23paper)' opacity='0.05'/%3E%3C/svg%3E");
-  border: 1px solid rgba(139, 69, 19, 0.2);
-  border-radius: 4px;
   padding: 15px;
-  box-shadow: 
-    0 5px 20px rgba(139, 69, 19, 0.15),
-    inset 0 0 10px rgba(139, 69, 19, 0.05);
-  backdrop-filter: blur(5px);
-  z-index: 10;
+  border-radius: 4px;
+  z-index: 30;
+  background: rgba(13, 13, 48, 0.95);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .light-theme .sub-menu h3 {
@@ -980,10 +1069,9 @@ watchEffect(() => {
 }
 
 .light-theme .sub-categories {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  padding: 0 10px;
 }
 
 .light-theme .sub-category {

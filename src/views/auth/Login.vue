@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -128,16 +128,15 @@ const rules = {
 const handleLogin = async () => {
   try {
     loading.value = true
+    await loginFormRef.value.validate()
+    
     const response = await userStore.login(formData.value)
     
     if (response.state === 200) {
       ElMessage.success('登录成功')
-      // 确保 cookie 已经设置完成
-      await new Promise(resolve => setTimeout(resolve, 100))
       
-      // 登录成功后跳转
-      const redirect = route.query.redirect || '/home'
-      await router.push(redirect)
+      await nextTick()
+      await router.push('/home')
     }
   } catch (error) {
     console.error('Login error:', error)

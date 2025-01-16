@@ -4,9 +4,10 @@ import request from '@/utils/request'
 // 登录
 export function login(data) {
   return request({
-    url: '/auth/login',
+    url: '/users/login',
     method: 'post',
-    data
+    data,
+    withCredentials: true
   })
 }
 
@@ -39,7 +40,7 @@ export function getUserInfo() {
 export const updateUserInfo = (data) => {
   return request({
     url: '/users/update',
-    method: 'post',
+    method: 'patch',
     data: {
       phone: data.phone,
       email: data.email,
@@ -52,11 +53,12 @@ export const updateUserInfo = (data) => {
 export const updatePassword = (data) => {
   return request({
     url: '/users/password',
-    method: 'post',
+    method: 'patch',
     data: {
       oldPassword: data.oldPassword,
       newPassword: data.newPassword
-    }
+    },
+    withCredentials: true
   })
 }
 
@@ -67,7 +69,7 @@ export const updateAvatar = (file) => {
   
   return request({
     url: '/users/avatar',
-    method: 'post',
+    method: 'patch',
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data'

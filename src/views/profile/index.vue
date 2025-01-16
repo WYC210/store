@@ -201,7 +201,7 @@ const passwordDialog = reactive({
 })
 
 // 密码表单
-const passwordForm = reactive({
+const passwordForm = ref({
   oldPassword: '',
   newPassword: '',
   confirmPassword: ''
@@ -215,19 +215,29 @@ const passwordRules = {
   ],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认新密码', trigger: 'blur' },
-    {
+    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' },
+    { 
       validator: (rule, value, callback) => {
-        if (value !== passwordForm.newPassword) {
-          callback(new Error('两次输入的密码不一致'))
+        if (value === passwordForm.value.oldPassword) {
+          callback(new Error('新密码不能与原密码相同'))
         } else {
           callback()
         }
       },
       trigger: 'blur'
+    }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== passwordForm.value.newPassword) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: ['blur', 'change']
     }
   ]
 }
@@ -316,21 +326,56 @@ const handleSave = async () => {
 const handlePasswordChange = async () => {
   try {
     await passwordFormRef.value.validate()
-    passwordDialog.loading = true
     
-    const response = await updatePassword(passwordForm)
+    if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+      ElMessage.error('两次输入的新密码不一致')
+      return
+    }
+    
+    console.log('Password update request data:', {
+      url: '/users/password',
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'AUTH-TOKEN': getCookie('token')
+      },
+      data: {
+        oldPassword: passwordForm.value.oldPassword,
+        newPassword: passwordForm.value.newPassword
+      }
+    })
+
+    const response = await updatePassword({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword
+    })
+
+    console.log('Password update response:', response)
+
     if (response.state === 200) {
-      ElMessage.success('密码修改成功，请重新登录')
+      ElMessage.success('密码修改成功')
       passwordDialog.visible = false
-      await userStore.logout()
-    } else {
-      throw new Error(response.message || '密码修改失败')
+      passwordForm.value = {
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }
     }
   } catch (error) {
-    console.error('Password change error:', error)
-    ElMessage.error(error.message || '密码修改失败')
-  } finally {
-    passwordDialog.loading = false
+    console.log('Password update error:', {
+      error,
+      response: error.response?.data,
+      message: error.message
+    })
+    
+    if (error.response?.data?.message) {
+      ElMessage.error(error.response.data.message)
+    } else if (error.message) {
+      ElMessage.error(error.message)
+    } else {
+      ElMessage.error('修改密码失败，请重试')
+    }
   }
 }
 

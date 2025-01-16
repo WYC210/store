@@ -1,10 +1,23 @@
 import request from '@/utils/request'
 
 // 获取商品列表
-export const getProducts = () => {
+export const getProducts = (params = {}) => {
+  const { 
+    categoryId,
+    keyword,
+    page = 1,
+    size = 10 
+  } = params
+
   return request({
     url: '/products',
-    method: 'get'
+    method: 'get',
+    params: {
+      categoryId,
+      keyword,
+      page,
+      size
+    }
   })
 }
 
@@ -24,6 +37,16 @@ export const addToCart = (productId, quantity = 1) => {
     data: {
       productId,
       quantity
-    }
+    },
+    withCredentials: true
+  })
+}
+
+// 获取分类列表
+export function getCategories() {
+  return request({
+    url: '/categories',
+    method: 'get',
+    withCredentials: true
   })
 } 

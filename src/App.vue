@@ -2,20 +2,28 @@
   <router-view></router-view>
 </template>
 
-<script>
-import { onUnmounted } from 'vue'
+<script setup>
+import { onUnmounted, onMounted } from 'vue'
 import { provideAnimationManager } from './composables/useAnimationManager'
+import { useUserStore } from '@/stores/user'
 
-export default {
-  name: 'App',
-  setup() {
-    const animationManager = provideAnimationManager()
+const animationManager = provideAnimationManager()
+const userStore = useUserStore()
 
-    onUnmounted(() => {
-      animationManager.cleanup()
-    })
+onUnmounted(() => {
+  animationManager.cleanup()
+})
+
+onMounted(async () => {
+  try {
+    const token = document.cookie.includes('AUTH-TOKEN')
+    if (token) {
+      await userStore.validateToken()
+    }
+  } catch (error) {
+    console.error('Token validation error:', error)
   }
-}
+})
 </script>
 
 <style>

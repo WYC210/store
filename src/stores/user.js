@@ -5,37 +5,17 @@ import router from '@/router'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: getCookie('token') || '',
     userInfo: null,
-    logoutTimer: null
   }),
 
   getters: {
-    isLoggedIn: (state) => !!state.token
+    isLoggedIn: (state) => !!state.userInfo
   },
 
   actions: {
-    setToken(token) {
-      if (!token) {
-        console.error('Token is empty')
-        return
-      }
-      
-      this.token = token
-      setCookie('token', token, {
-        path: '/',
-        sameSite: 'Lax',
-        maxAge: 7200 // 2小时过期
-      })
-    },
-
-    clearToken() {
-      this.token = ''
-      removeCookie('token')
-    },
-
     setUserInfo(info) {
       this.userInfo = info
+      localStorage.setItem('userInfo', JSON.stringify(info))
     },
 
     async login(userData) {
@@ -45,29 +25,29 @@ export const useUserStore = defineStore('user', {
           password: userData.password
         })
 
-        console.log('Login response:', response) // 调试用
-
         if (response.state === 200 && response.data) {
-          const token = response.data.token
+          // 先获取用户信息
+          const userInfoResponse = await getUserInfo()
           
-          // 先设置 token
-          this.setToken(token)
-          console.log('Token set:', token) // 调试用
-          
-          // 验证 token 是否设置成功
-          const savedToken = getCookie('token')
-          console.log('Saved token:', savedToken) // 调试用
-          
-          if (!savedToken) {
-            throw new Error('Token 设置失败')
+          if (userInfoResponse.state === 200 && userInfoResponse.data) {
+            // 确保异步操作完成
+            await new Promise(resolve => setTimeout(resolve, 50))
+            
+            // 设置用户信息
+            this.setUserInfo({
+              uid: userInfoResponse.data.uid,
+              username: userInfoResponse.data.username,
+              avatar: userInfoResponse.data.avatar,
+              power: userInfoResponse.data.power
+            })
+            
+            // 再次确认用户信息已经设置
+            if (!this.userInfo) {
+              throw new Error('用户信息设置失败')
+            }
+          } else {
+            throw new Error('获取用户信息失败')
           }
-
-          // 设置用户信息
-          this.setUserInfo({
-            uid: response.data.uid,
-            username: response.data.username,
-            avatar: response.data.avatar
-          })
 
           return response
         } else {
@@ -75,17 +55,14 @@ export const useUserStore = defineStore('user', {
         }
       } catch (error) {
         console.error('Login error:', error)
-        this.clearToken()
-        this.userInfo = null
+        this.clearUserInfo()
         throw error
       }
     },
 
     async logout() {
-      this.clearAutoLogout()
       try {
-        this.clearToken()
-        this.userInfo = null
+        this.clearUserInfo()
         router.push('/login')
       } catch (error) {
         console.error('Logout error:', error)
@@ -93,11 +70,17 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    clearUserInfo() {
+      this.userInfo = null
+      localStorage.removeItem('userInfo')
+    },
+
     async validateToken() {
       try {
-        const token = getCookie('token')
-        if (!token) {
-          throw new Error('未登录')
+        // 尝试从 localStorage 恢复用户信息
+        const savedUserInfo = localStorage.getItem('userInfo')
+        if (savedUserInfo) {
+          this.userInfo = JSON.parse(savedUserInfo)
         }
 
         const response = await getUserInfo()
@@ -106,46 +89,13 @@ export const useUserStore = defineStore('user', {
           this.setUserInfo(response.data)
           return response
         } else {
-          this.clearToken()
-          this.userInfo = null
+          this.clearUserInfo()
           throw new Error(response.message || '验证失败')
         }
       } catch (error) {
-        this.clearToken()
-        this.userInfo = null
+        this.clearUserInfo()
         throw error
       }
     },
-
-    startAutoLogout() {
-      if (this.logoutTimer) {
-        clearTimeout(this.logoutTimer)
-      }
-
-      const token = localStorage.getItem('token')
-      if (token) {
-        try {
-          const tokenData = JSON.parse(atob(token.split('.')[1]))
-          const expTime = tokenData.exp * 1000
-          const timeToExpire = expTime - Date.now()
-          
-          if (timeToExpire > 0) {
-            this.logoutTimer = setTimeout(() => {
-              this.logout()
-              ElMessage.warning('登录已过期，请重新登录')
-            }, timeToExpire)
-          }
-        } catch (error) {
-          console.error('Token parse error:', error)
-        }
-      }
-    },
-
-    clearAutoLogout() {
-      if (this.logoutTimer) {
-        clearTimeout(this.logoutTimer)
-        this.logoutTimer = null
-      }
-    }
   }
 }) 
