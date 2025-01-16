@@ -75,19 +75,19 @@
             <div class="mobile-categories" v-if="isMobileView">
               <el-collapse v-model="activeCollapse">
                 <el-collapse-item 
-                  v-for="(category, index) in categories" 
-                  :key="index"
+                  v-for="category in categories" 
+                  :key="category.categoryId"
                   :title="category.name"
-                  :name="index"
+                  :name="category.categoryId"
                 >
                   <div class="mobile-sub-categories">
                     <el-tag
-                      v-for="(subCategory, subIndex) in category.children"
-                      :key="subIndex"
+                      v-for="subCategory in category.children"
+                      :key="subCategory.categoryId"
                       :class="{ 'light-theme': !isDarkTheme }"
                       @click="handleSubCategoryClick(subCategory)"
                     >
-                      {{ subCategory }}
+                      {{ subCategory.name }}
                     </el-tag>
                   </div>
                 </el-collapse-item>
@@ -115,15 +115,14 @@
             <!-- 二级菜单 -->
             <div 
               class="sub-menu" 
-              v-show="activeCategory"
-              @mouseenter="handleSubmenuEnter"
+              @mouseenter="() => clearHideTimer()"
               @mouseleave="handleSubmenuLeave"
-              v-if="activeCategory?.children?.length"
+              v-if="activeCategory && activeCategory.children?.length"
             >
-              <h3>{{ activeCategory?.name }}</h3>
+              <h3>{{ activeCategory.name }}</h3>
               <div class="sub-categories">
                 <span 
-                  v-for="subCategory in activeCategory?.children" 
+                  v-for="subCategory in activeCategory.children" 
                   :key="subCategory.categoryId"
                   class="sub-category"
                   @click="handleSubCategoryClick(subCategory)"
@@ -280,6 +279,9 @@ const categories = ref([])
 const activeCategory = ref(null)
 const activeIndex = ref('0')
 
+// 定时器
+let hideTimer = null
+
 // 获取商品列表
 const fetchProducts = async () => {
   try {
@@ -321,26 +323,31 @@ const fetchCategories = async () => {
 
 // 分类相关处理
 const handleMouseEnter = (category) => {
+  clearHideTimer()
   activeCategory.value = category
 }
 
 // 菜单项离开处理
 const handleMenuItemLeave = () => {
-  // 使用 nextTick 确保 DOM 更新
-  nextTick(() => {
-    const submenu = document.querySelector('.sub-menu')
-    if (!submenu?.matches(':hover')) {
-      activeCategory.value = null
-    }
-  })
+  hideTimer = setTimeout(() => {
+    nextTick(() => {
+      const submenu = document.querySelector('.sub-menu')
+      if (!submenu?.matches(':hover')) {
+        activeCategory.value = null
+      }
+    })
+  }, 100)
 }
 
-const handleSubmenuEnter = () => {
-  if (!activeCategory.value) return
-  clearTimeout(activeCategory.value._timer)
+const clearHideTimer = () => {
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+    hideTimer = null
+  }
 }
 
 const handleSubmenuLeave = () => {
+  clearHideTimer()
   activeCategory.value = null
 }
 
@@ -381,6 +388,9 @@ onUnmounted(() => {
   Object.values(timers).forEach(timer => {
     if (timer) clearTimeout(timer)
   })
+  if (hideTimer) {
+    clearTimeout(hideTimer)
+  }
   
   // 移除事件监听
   window.removeEventListener('scroll', handleScroll)
@@ -433,13 +443,10 @@ const handleSubCategoryClick = (subCategory) => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   width: 100%;
-  z-index: 1000; /* 确保导航栏始终在最上层 */
+  z-index: 1000;
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  transform: translateZ(0);
-  transition: transform 0.3s ease;
 }
 
 .navbar-fixed {
@@ -447,7 +454,7 @@ const handleSubCategoryClick = (subCategory) => {
 }
 
 .navbar-placeholder {
-  height: 70px; /* 与导航栏高度保持一致 */
+  height: auto;
 }
 
 @keyframes slideDown {
@@ -490,7 +497,8 @@ const handleSubCategoryClick = (subCategory) => {
 }
 
 .main-content {
-  margin: 20px 0;
+  margin: 0;
+  padding-top: 20px;
 }
 
 .carousel {
@@ -518,7 +526,8 @@ const handleSubCategoryClick = (subCategory) => {
   padding: 20px;
   height: 400px;
   position: relative;
-  z-index: 20; /* 确保分类区域在���航栏下方但高于其他内容 */
+  margin-top: 70px;  /* 为固定导航栏留出空间 */
+  z-index: 20;
 }
 
 .category-menu {
@@ -548,8 +557,8 @@ const handleSubCategoryClick = (subCategory) => {
 
 .sub-menu {
   position: absolute;
-  left: 100%;
-  top: 0;
+  left: 0;
+  top: 100%;
   width: 200px;
   padding: 15px;
   border-radius: 4px;
@@ -582,18 +591,20 @@ const handleSubCategoryClick = (subCategory) => {
   bottom: 0;
   background: linear-gradient(
     transparent 0%,
-    rgba(0, 255, 255, 0.2) 50%,
+    rgba(0, 255, 255, 0.15) 50%,
     transparent 100%
   );
+  height: 30px; /* 适当增加扫描线的高度 */
+  opacity: 0.6; /* 提高扫描线的不透明度 */
   animation: scanline 2s linear infinite;
 }
 
 @keyframes scanline {
   0% {
-    transform: translateY(-100%);
+    transform: translateY(0);
   }
   100% {
-    transform: translateY(100%);
+    transform: translateY(calc(100% - 30px)); /* 确保扫描线不会超出菜单范围 */
   }
 }
 
@@ -610,6 +621,8 @@ const handleSubCategoryClick = (subCategory) => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .sub-category {
@@ -1034,10 +1047,10 @@ const handleSubCategoryClick = (subCategory) => {
   padding: 15px;
   border-radius: 4px;
   z-index: 30;
-  background: rgba(13, 13, 48, 0.95);
+  background: rgba(244, 236, 216, 0.98);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(139, 69, 19, 0.2);
 }
 
 .light-theme .sub-menu h3 {
@@ -1953,6 +1966,10 @@ const handleSubCategoryClick = (subCategory) => {
   .navbar {
     flex-direction: column;
     padding: 10px;
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
   }
 
   .logo-container {
@@ -1978,90 +1995,19 @@ const handleSubCategoryClick = (subCategory) => {
 /* 响应式分类区域 */
 @media screen and (max-width: 768px) {
   .categories {
+    margin-top: 20px;
+    padding: 10px;
     height: auto;
-    margin-bottom: 20px;
-    padding: 15px;
-    margin-top: 60px; /* 为固定导航栏留出��间 */
   }
 
   .sub-menu {
-    position: absolute;
-    left: 0;
-    top: 100%;
+    position: relative;
     width: 100%;
-    margin-top: 0;
-    z-index: 30;
-    visibility: visible;
-    opacity: 1;
-    transition: all 0.3s ease;
+    margin-top: 10px;
   }
 
-  /* 亮色主题移动端二级菜单样式 */
-  .light-theme .sub-menu {
-    background: rgba(244, 236, 216, 0.98);
-    border: 1px solid rgba(139, 69, 19, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    visibility: visible;
-    opacity: 1;
-  }
-
-  /* 暗色主题移动端二级菜单样式 */
-  .home-container:not(.light-theme) .sub-menu {
-    background: rgba(20, 20, 40, 0.98);
-    border: 1px solid rgba(255, 0, 255, 0.2);
-    box-shadow: 0 4px 20px rgba(255, 0, 255, 0.15);
-  }
-
-  /* 移动端二级菜单内容样式 */
-  @media screen and (max-width: 768px) {
-    .sub-menu h3 {
-      font-size: 16px;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    }
-    
-    .light-theme .sub-menu h3 {
-      color: #8B4513;
-      border-bottom-color: rgba(139, 69, 19, 0.2);
-    }
-    
-    .home-container:not(.light-theme) .sub-menu h3 {
-      color: #fff;
-      border-bottom-color: rgba(255, 0, 255, 0.2);
-    }
-    
-    .sub-categories {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    
-    .sub-category {
-      padding: 8px;
-      text-align: center;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    
-    .light-theme .sub-category {
-      background: rgba(255, 255, 255, 0.5);
-      color: #8B4513;
-    }
-    
-    .light-theme .sub-category:active {
-      background: rgba(139, 69, 19, 0.1);
-    }
-    
-    .home-container:not(.light-theme) .sub-category {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
-    
-    .home-container:not(.light-theme) .sub-category:active {
-      background: rgba(255, 0, 255, 0.2);
-    }
+  .sub-categories {
+    max-height: 200px;
   }
 }
 
@@ -2217,176 +2163,76 @@ const handleSubCategoryClick = (subCategory) => {
 
 /* 移动端分类样式 */
 .mobile-categories {
-  padding: 0;
-  margin: 60px 0 20px; /* 添加顶部边距，避免被导航栏遮挡 */
+  width: 100%;
+  margin-bottom: 20px;
 }
 
-@media screen and (max-width: 768px) {
-  .categories {
-    margin-top: 0; /* 移除额外的顶部边距 */
-    padding: 10px;
-  }
-
-  /* 调整主内容区域在移动端的布局 */
-  .main-content {
-    padding-top: 60px; /* 为固定导航栏留出空间 */
-  }
-
-  /* 当导航栏不固定时，移除顶部内边距 */
-  .navbar:not(.navbar-fixed) + .main-content {
-    padding-top: 0;
-  }
-
-  /* 优化移动端的分类区域位置 */
-  .mobile-categories {
-    position: relative;
-    z-index: 10; /* 确保分类在适当的层级 */
-  }
+.mobile-sub-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
 }
 
-/* 自定义折叠面板样式 */
-.mobile-categories :deep(.el-collapse) {
+:deep(.el-collapse) {
   border: none;
   background: transparent;
 }
 
-.mobile-categories :deep(.el-collapse-item__header) {
-  background: transparent;
+:deep(.el-collapse-item__header) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   border: none;
-  color: inherit;
-  font-size: 16px;
-  padding: 10px;
-  margin-bottom: 5px;
-}
-
-/* 折叠面板内容区域样式 */
-.mobile-categories :deep(.el-collapse-item__content) {
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 0 15px;
+  height: 48px;
+  line-height: 48px;
   border-radius: 4px;
 }
 
-/* 亮色主题折叠面板样式 */
-.light-theme .mobile-categories :deep(.el-collapse-item__header) {
-  background: rgba(244, 236, 216, 0.9);
-  color: #8B4513;
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(139, 69, 19, 0.2);
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.1);
+:deep(.el-collapse-item__content) {
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  padding: 10px;
+  border-radius: 0 0 4px 4px;
 }
 
-/* 秋叶装饰效果 */
-.light-theme .mobile-categories :deep(.el-collapse-item__header)::before {
-  content: '🍁';
-  position: absolute;
-  right: 40px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
-  opacity: 0.6;
-  animation: floatLeaf 3s ease-in-out infinite;
+:deep(.el-tag) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  margin: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-.light-theme .mobile-categories :deep(.el-collapse-item__header)::after {
-  content: '🍂';
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  opacity: 0.4;
-  animation: floatLeaf 4s ease-in-out infinite reverse;
+:deep(.el-tag:hover) {
+  background: rgba(0, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
-/* 展开状态的额外装饰 */
-.light-theme .mobile-categories :deep(.el-collapse-item.is-active) .el-collapse-item__header {
-  background: linear-gradient(
-    to right,
-    rgba(244, 236, 216, 0.95),
-    rgba(255, 248, 220, 0.95)
-  );
-  border-color: rgba(139, 69, 19, 0.3);
+/* 亮色主题移动端样式 */
+.light-theme :deep(.el-collapse-item__header) {
+  background: rgba(244, 236, 216, 0.95);
+  color: #2C4F2C;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
 }
 
-/* 内容区域的秋叶装饰 */
-.light-theme .mobile-categories :deep(.el-collapse-item__content) {
-  background: rgba(255, 248, 220, 0.95);
-  border: 1px solid rgba(139, 69, 19, 0.15);
-  border-top: none;
-  position: relative;
-  overflow: hidden;
+.light-theme :deep(.el-collapse-item__content) {
+  background: rgba(244, 236, 216, 0.8);
+  color: #2C4F2C;
 }
 
-.light-theme .mobile-categories :deep(.el-collapse-item__content)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 20px,
-      rgba(139, 69, 19, 0.03) 20px,
-      rgba(139, 69, 19, 0.03) 40px
-    );
-  pointer-events: none;
-}
-
-/* 秋叶飘动动画 */
-@keyframes floatLeaf {
-  0%, 100% {
-    transform: translateY(-50%) rotate(0deg);
-  }
-  25% {
-    transform: translateY(-60%) rotate(5deg);
-  }
-  75% {
-    transform: translateY(-40%) rotate(-5deg);
-  }
-}
-
-/* 展开/收起动画 */
-.light-theme .mobile-categories :deep(.el-collapse-item__wrap) {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  background: transparent;
-}
-
-/* 标签样式优化 */
-.light-theme .mobile-sub-categories .el-tag {
+.light-theme :deep(.el-tag) {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(139, 69, 19, 0.2);
-  color: #8B4513;
-  position: relative;
-  overflow: hidden;
+  color: #2C4F2C;
 }
 
-.light-theme .mobile-sub-categories .el-tag::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    45deg,
-    transparent,
-    rgba(139, 69, 19, 0.1),
-    transparent
-  );
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
+.light-theme :deep(.el-tag:hover) {
+  background: rgba(139, 69, 19, 0.15);
+  border-color: rgba(139, 69, 19, 0.4);
 }
 
-.light-theme .mobile-sub-categories .el-tag:active::before {
-  transform: translateX(0);
-}
-
-/* 移除移动端不需要的样式 */
 @media screen and (max-width: 768px) {
   .categories {
     margin-top: 20px;
@@ -2810,5 +2656,61 @@ const handleSubCategoryClick = (subCategory) => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+/* 滚动条样式 */
+.sub-categories::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sub-categories::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.sub-categories::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.light-theme .sub-categories::-webkit-scrollbar-thumb {
+  background: rgba(139, 69, 19, 0.3);
+}
+
+/* 响应式布局调整 */
+@media screen and (min-width: 1200px) {
+  .sub-menu {
+    left: 100%;
+    top: 0;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .light-theme .sub-menu {
+    position: relative;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin-top: 10px;
+    background: rgba(244, 236, 216, 0.95);
+  }
+  
+  .light-theme .sub-category {
+    width: calc(50% - 10px);
+    margin: 5px;
+  }
+}
+
+/* 移动端黑暗模式下的分类区域调整 */
+.home-container:not(.light-theme) .mobile-categories {
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 10px;
+}
+
+/* 确保内容不被导航栏遮挡 */
+.main-content {
+  padding-top: 10px;
 }
 </style> 

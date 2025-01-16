@@ -10,7 +10,8 @@ const request = axios.create({
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true  // 全局启用 credentials
 })
 
 // 需要登录验证的接口路径
@@ -29,6 +30,12 @@ const isAuthRequired = (url) => {
 // 请求拦截器
 request.interceptors.request.use(
   config => {
+    config.withCredentials = true
+    // 从 cookie 中获取 token
+    const token = getCookie('token')
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
     return config
   },
   error => {
@@ -39,6 +46,14 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
+    // 如果响应头中包含新的 token，更新 cookie
+    const newToken = response.headers['new-token']
+    if (newToken) {
+      setCookie('token', newToken, {
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60
+      })
+    }
     if (response.data.state === 500) {
       return Promise.reject(new Error(response.data.message))
     }
@@ -52,6 +67,13 @@ request.interceptors.response.use(
   },
   error => {
     console.error('Request error:', error)
+    // 如果是 401 错误，可能是 cookie 过期
+    if (error.response && error.response.status === 401) {
+      // 清除无效的 token
+      removeCookie('token')
+      localStorage.removeItem('userInfo')
+      localStorage.removeItem('isAuthenticated')
+    }
     return Promise.reject(error)
   }
 )

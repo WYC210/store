@@ -4,6 +4,7 @@ import Home from '@/views/home/index.vue'
 import NotFound from '@/views/NotFound.vue'
 import Admin from '@/views/admin/index.vue'
 import { getCookie, removeCookie } from '@/utils/cookie'
+import { useUserStore } from '@/stores/user'
 
 const routes = [
   {
@@ -113,21 +114,25 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  // 进入登录或注册页面时
-  if (to.path === '/login' || to.path === '/register') {
-    next()
-    return
-  }
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
 
-  // 验证需要登录的页面
-  if (to.matched.some(record => record.meta.requiresAuth)) {
-    const token = getCookie('token')
-    if (!token) {
-      ElMessage.warning('请先登录')
-      next({
-        path: '/login'
-      })
+  // 初始化用户状态
+  userStore.initializeFromStorage()
+
+  // 需要登录的路由
+  if (to.meta.requiresAuth) {
+    if (!userStore.isLoggedIn) {
+      // 尝试验证token
+      try {
+        await userStore.validateToken()
+        next()
+      } catch (error) {
+        next({
+          path: '/login',
+          query: { redirect: to.fullPath }
+        })
+      }
     } else {
       next()
     }

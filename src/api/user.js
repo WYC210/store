@@ -1,4 +1,3 @@
-import axios from 'axios'
 import request from '@/utils/request'
 
 // 登录
@@ -7,37 +6,42 @@ export function login(data) {
     url: '/users/login',
     method: 'post',
     data,
-    withCredentials: true
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
   })
 }
 
 // 注册
-export const register = async (userData) => {
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'http://localhost:8088/users/reg',
-      data: userData,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    return response.data
-  } catch (error) {
-    console.error('API register error:', error)
-    throw error
-  }
+export function register(userData) {
+  return request({
+    url: '/users/reg',
+    method: 'post',
+    data: userData,
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
 }
 
+// 获取用户信息
 export function getUserInfo() {
   return request({
-    url: '/user/info',
-    method: 'get'
+    url: '/users/info',
+    method: 'get',
+    withCredentials: true,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
   })
 }
 
 // 更新用户信息
-export const updateUserInfo = (data) => {
+export function updateUserInfo(data) {
   return request({
     url: '/users/update',
     method: 'patch',
@@ -45,6 +49,11 @@ export const updateUserInfo = (data) => {
       phone: data.phone,
       email: data.email,
       gender: data.gender
+    },
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
     }
   })
 }
@@ -58,7 +67,11 @@ export const updatePassword = (data) => {
       oldPassword: data.oldPassword,
       newPassword: data.newPassword
     },
-    withCredentials: true
+    withCredentials: true,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
   })
 }
 
@@ -71,8 +84,10 @@ export const updateAvatar = (file) => {
     url: '/users/avatar',
     method: 'patch',
     data: formData,
+    withCredentials: true,
     headers: {
-      'Content-Type': 'multipart/form-data'
+      'Content-Type': 'multipart/form-data',
+      'X-Requested-With': 'XMLHttpRequest'
     }
   })
 } 

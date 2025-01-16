@@ -128,16 +128,14 @@ const rules = {
 const handleLogin = async () => {
   try {
     loading.value = true
-    await loginFormRef.value.validate()
-    
-    const response = await userStore.login(formData.value)
-    
-    if (response.state === 200) {
-      ElMessage.success('登录成功')
-      
-      await nextTick()
-      await router.push('/home')
-    }
+    await userStore.login({
+      username: formData.value.username,
+      password: formData.value.password
+    })
+    ElMessage.success('登录成功')
+    // 获取重定向地址
+    const redirect = route.query.redirect || '/home'
+    router.push(redirect)
   } catch (error) {
     console.error('Login error:', error)
     ElMessage.error(error.message || '登录失败')

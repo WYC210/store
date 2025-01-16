@@ -129,12 +129,16 @@ const handleRegister = async () => {
     })
 
     // 注册成功
-    ElMessage.success('注册成功，请登录')
-    router.push('/login')
+    if (response.state === 200) {
+      ElMessage.success('注册成功')
+      router.push('/login')
+    } else {
+      ElMessage.error(response.message || '注册失败')
+    }
     
   } catch (error) {
     console.error('Register error:', error)
-    ElMessage.error(error.message || '注册失败，请重试')
+    ElMessage.error(error.message || '注册失败')
   } finally {
     loading.value = false
   }

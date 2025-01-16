@@ -25,7 +25,7 @@
           ref="formRef"
           :model="userForm"
           :rules="rules"
-          label-width="80px"
+          label-width="120px"
         >
           <el-descriptions :column="1" border>
             <el-descriptions-item label="用户ID">
@@ -186,11 +186,13 @@ const userForm = reactive({
 
 // 表单验证规则
 const rules = {
-  phone: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
-  ],
   email: [
+    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ]
 }
 
@@ -300,23 +302,32 @@ const cancelEdit = () => {
 // 修改保存处理函数
 const handleSave = async () => {
   try {
-    await formRef.value.validate()
     loading.value = true
     
-    const response = await updateUserInfo(userForm)
+    // 表单验证
+    await formRef.value.validate()
+    
+    // 发送更新请求
+    const response = await updateUserInfo({
+      phone: userForm.phone,
+      email: userForm.email,
+      gender: userForm.gender
+    })
+    
     if (response.state === 200) {
       ElMessage.success('保存成功')
-      userStore.setUserInfo({
-        ...userStore.userInfo,
-        ...userForm
-      })
-      isEditing.value = false  // 保存成功后关闭编辑状态
+      // 更新本地用户信息
+      userStore.setUserInfo(response.data)
     } else {
-      throw new Error(response.message || '保存失败')
+      throw new Error(response.message || '更新用户信息失败')
     }
   } catch (error) {
     console.error('Save error:', error)
-    ElMessage.error(error.message || '保存失败')
+    if (error.response?.data?.state === 400) {
+      ElMessage.warning(error.response.data.message)
+    } else {
+      ElMessage.error(error.message || '保存失败')
+    }
   } finally {
     loading.value = false
   }
@@ -419,42 +430,63 @@ const handleLogout = async () => {
 }
 
 // 检查登录状态并获取用户信息
-const checkAuth = async () => {
+async function checkAuth() {
   try {
+    const userStore = useUserStore()
     loading.value = true
-    const token = getCookie('token')
-    if (!token) {
-      throw new Error('未登录')
+
+    // 先检查本地状态
+    if (userStore.isLoggedIn) {
+      // 更新表单数据
+      updateFormData(userStore.userInfo)
+      return true
     }
 
-    const response = await userStore.validateToken()
-    console.log('后端返回的用户信息:', response)
-    
-    if (!response || response.state !== 200) {
-      throw new Error('验证失败')
+    // 尝试验证 token
+    try {
+      const isValid = await userStore.validateToken()
+      if (!isValid) {
+        throw new Error('验证失败')
+      }
+      // 验证成功后更新表单数据
+      updateFormData(userStore.userInfo)
+      return true
+    } catch (error) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      throw new Error('未登录')
     }
-    
-    console.log('用户信息:', userStore.userInfo)
-    
-    // 更新表单数据
-    userForm.phone = userStore.userInfo?.phone || ''
-    userForm.email = userStore.userInfo?.email || ''
-    userForm.gender = userStore.userInfo?.gender || 0
-    
-    console.log('表单数据:', userForm)
   } catch (error) {
     console.error('Auth check failed:', error)
     removeCookie('token')
-    ElMessage.warning('请重新登录')
-    router.push('/login')
+    throw error
   } finally {
     loading.value = false
   }
 }
 
-// 在组件挂载时立即验证
+// 更新表单数据的辅助函数
+function updateFormData(userInfo) {
+  if (!userInfo) return
+  
+  userForm.phone = userInfo.phone || ''
+  userForm.email = userInfo.email || ''
+  userForm.gender = userInfo.gender || 0
+  
+  console.log('用户信息已更新:', {
+    phone: userForm.phone,
+    email: userForm.email,
+    gender: userForm.gender
+  })
+}
+
+// 在组件挂载时检查认证状态
 onMounted(async () => {
-  await checkAuth()
+  try {
+    await checkAuth()
+  } catch (error) {
+    console.error('初始化认证检查失败:', error)
+  }
 })
 </script>
 
