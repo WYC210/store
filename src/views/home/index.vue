@@ -70,9 +70,10 @@
       <div class="section-divider" :class="{ 'light': !isDarkTheme }"></div>
       <el-row :gutter="20">
         <el-col :xs="24" :sm="24" :md="8" :lg="6">
-          <section class="categories">
+          <section class="categories" :style="{ height: contentHeight }">
             <!-- 移动端分类展示 -->
             <div class="mobile-categories" v-if="isMobileView">
+              <h2>商品分类</h2>
               <el-collapse v-model="activeCollapse">
                 <el-collapse-item 
                   v-for="category in categories" 
@@ -81,14 +82,14 @@
                   :name="category.categoryId"
                 >
                   <div class="mobile-sub-categories">
-                    <el-tag
+                    <span
                       v-for="subCategory in category.children"
                       :key="subCategory.categoryId"
-                      :class="{ 'light-theme': !isDarkTheme }"
+                      class="mobile-sub-category"
                       @click="handleSubCategoryClick(subCategory)"
                     >
                       {{ subCategory.name }}
-                    </el-tag>
+                    </span>
                   </div>
                 </el-collapse-item>
               </el-collapse>
@@ -99,6 +100,7 @@
               <el-menu 
                 class="category-menu" 
                 :default-active="activeIndex"
+                :style="{ height: 'calc(100% - 60px)' }"
               >
                 <el-menu-item 
                   v-for="category in categories" 
@@ -111,35 +113,56 @@
                   {{ category.name }}
                 </el-menu-item>
               </el-menu>
-            </template>
-            <!-- 二级菜单 -->
-            <div 
-              class="sub-menu" 
-              @mouseenter="() => clearHideTimer()"
-              @mouseleave="handleSubmenuLeave"
-              v-if="activeCategory && activeCategory.children?.length"
-            >
-              <h3>{{ activeCategory.name }}</h3>
-              <div class="sub-categories">
-                <span 
-                  v-for="subCategory in activeCategory.children" 
-                  :key="subCategory.categoryId"
-                  class="sub-category"
-                  @click="handleSubCategoryClick(subCategory)"
-                >
-                  {{ subCategory.name }}
-                </span>
+              
+              <!-- 二级菜单 -->
+              <div 
+                class="sub-menu" 
+                v-show="activeCategory && activeCategory.children?.length"
+                @mouseenter="clearHideTimer"
+                @mouseleave="handleSubmenuLeave"
+              >
+                <h3>{{ activeCategory?.name }}</h3>
+                <div class="sub-categories">
+                  <span 
+                    v-for="subCategory in activeCategory?.children" 
+                    :key="subCategory.categoryId"
+                    class="sub-category"
+                    @click="handleSubCategoryClick(subCategory)"
+                  >
+                    {{ subCategory.name }}
+                  </span>
+                </div>
               </div>
-            </div>
+            </template>
           </section>
         </el-col>
         <el-col :xs="24" :sm="24" :md="16" :lg="18">
-          <!-- 轮播图 -->
-          <el-carousel class="carousel" autoplay>
-            <el-carousel-item v-for="(item, index) in carouselItems" :key="index">
-              <ImageLoader :src="item.image" alt="轮播图" class="carousel-image" />
-            </el-carousel-item>
-          </el-carousel>
+          <div class="carousel-container">
+            <el-carousel 
+              :interval="4000"
+              type="card"
+              :height="contentHeight"
+              class="carousel"
+              indicator-position="outside"
+              arrow="always"
+            >
+              <el-carousel-item v-for="(item, index) in carouselItems" :key="index">
+                <el-image
+                  :src="item.image"
+                  :alt="item.title"
+                  fit="cover"
+                  class="carousel-image"
+                  loading="lazy"
+                >
+                  <template #error>
+                    <div class="image-slot">
+                      <el-icon><Picture /></el-icon>
+                    </div>
+                  </template>
+                </el-image>
+              </el-carousel-item>
+            </el-carousel>
+          </div>
         </el-col>
       </el-row>
     </section>
@@ -193,7 +216,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watchEffect, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watchEffect, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, Picture } from '@element-plus/icons-vue'
 import ImageLoader from '@/components/ImageLoader.vue'
@@ -202,6 +225,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { getProducts, addToCart, getCategories } from '@/api/product'
+import csImage from '../../assets/cs.png'  // 正确的相对路径
 
 // 基础状态
 const router = useRouter()
@@ -271,8 +295,30 @@ const productParams = ref({
 const total = ref(0)
 const loading = ref(false)
 
+// 统一管理高度的计算属性
+const contentHeight = computed(() => {
+  return window.innerWidth <= 768 ? '300px' : '400px'  // 调整移动端高度
+})
+
 // 轮播图数据
-const carouselItems = ref([])
+const carouselItems = ref([
+  {
+    image: csImage,
+    title: 'Cyberpunk Street 1'
+  },
+  {
+    image: csImage,
+    title: 'Cyberpunk Street 2'
+  },
+  {
+    image: csImage,
+    title: 'Cyberpunk Street 3'
+  },
+  {
+    image: csImage,
+    title: 'Cyberpunk Street 4'
+  }
+])
 
 // 分类数据
 const categories = ref([])
@@ -290,16 +336,6 @@ const fetchProducts = async () => {
     if (response.state === 200) {
       products.value = response.data.list
       total.value = response.data.total
-      
-      // 从商品列表中随机选择3-4个商品作为轮播图
-      const count = Math.floor(Math.random() * 2) + 3 // 随机3或4个
-      carouselItems.value = shuffleArray([...products.value])
-        .slice(0, count)
-        .map(product => ({
-          image: product.imageUrl,
-          title: product.name,
-          link: `/product/${product.productId}`
-        }))
     }
   } catch (error) {
     console.error('获取商品列表失败:', error)
@@ -420,15 +456,18 @@ const handleSubCategoryClick = (subCategory) => {
   }
   fetchProducts()
 }
+
+const activeCollapse = ref([])  // 移动端折叠面板的激活项
+const isMobileView = computed(() => window.innerWidth <= 768)
 </script>
 
 <style scoped>
 .home-container {
   padding: 20px;
-  background: #0B0B2B;
+  background: #060524;
   min-height: 100vh;
   color: #fff;
-  will-change: auto; /* 重置 will-change */
+  will-change: auto;
   contain: content;
 }
 
@@ -437,9 +476,9 @@ const handleSubCategoryClick = (subCategory) => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 20px;
-  background: rgba(13, 13, 48, 0.95);
+  background: rgba(6, 5, 36, 0.95);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255, 0, 255, 0.3);
+  border-bottom: 1px solid rgba(250, 159, 252, 0.3);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   width: 100%;
@@ -498,144 +537,269 @@ const handleSubCategoryClick = (subCategory) => {
 
 .main-content {
   margin: 0;
-  padding-top: 20px;
+  padding-top: 20px;  /* 减小顶部内边距 */
+}
+
+.carousel-container {
+  width: 100%;
+  margin: 40px auto;
+  padding: 0 20px;
 }
 
 .carousel {
-  margin: 0;
-  height: 400px;
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(36, 208, 254, 0.5);
+  box-shadow: 
+    0 0 20px rgba(36, 208, 254, 0.3),
+    0 0 40px rgba(36, 208, 254, 0.2),
+    inset 0 0 15px rgba(36, 208, 254, 0.2);
+  background: rgba(6, 5, 36, 0.3);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 2px;
+  perspective: 1000px;  /* 添加3D视角 */
 }
 
-.carousel :deep(.el-carousel__container) {
-  height: 100% !important;
+.carousel :deep(.el-carousel__item) {
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center center;
+}
+
+.carousel :deep(.el-carousel__item--card) {
+  width: 60%;
+  box-shadow: 
+    0 0 30px rgba(250, 159, 252, 0.2),
+    0 0 60px rgba(36, 208, 254, 0.15);
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 1px solid rgba(36, 208, 254, 0.3);
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 1;
+  }
 }
 
 .carousel-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: translateZ(0);
-  will-change: transform;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  filter: brightness(1.1) contrast(1.1);
+  transform-style: preserve-3d;  /* 保持3D效果 */
+  &:hover {
+    filter: brightness(1.2) contrast(1.2);
+    transform: scale(1.02);
+  }
+}
+
+/* 投影效果保持不变 */
+.carousel::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 10px;
+  background: rgba(36, 208, 254, 0.3);
+  border-radius: 0 0 20px 20px;
+  box-shadow: 
+    0 0 20px rgba(36, 208, 254, 0.5),
+    0 0 40px rgba(36, 208, 254, 0.3);
+  z-index: 2;
+}
+
+.image-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.1);
+  color: #909399;
+}
+
+/* 优化指示器样式 */
+.carousel :deep(.el-carousel__indicators) {
+  transform: translateY(20px);
+}
+
+.carousel :deep(.el-carousel__indicator) {
+  padding: 12px 4px;
+}
+
+.carousel :deep(.el-carousel__button) {
+  width: 30px;
+  height: 3px;
+  background-color: rgba(36, 208, 254, 0.7);
+  border-radius: 3px;
 }
 
 .categories {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(6, 5, 36, 0.8);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(250, 159, 252, 0.5);
+  box-shadow: 
+    0 0 20px rgba(250, 159, 252, 0.3),
+    0 0 40px rgba(250, 159, 252, 0.2),
+    inset 0 0 15px rgba(250, 159, 252, 0.2);
   border-radius: 4px;
   padding: 20px;
-  height: 400px;
   position: relative;
-  margin-top: 70px;  /* 为固定导航栏留出空间 */
   z-index: 20;
+  margin-top: 40px;
+}
+
+/* 分类标题样式优化 */
+.categories h2 {
+  color: #FA9FFC;  /* 霓虹粉色文字 */
+  text-shadow: 
+    0 0 10px rgba(250, 159, 252, 0.5),
+    0 0 20px rgba(250, 159, 252, 0.3);
+  margin-bottom: 20px;
+  padding-top: 10px;
+  font-size: 1.5em;
+  border-bottom: 1px solid rgba(250, 159, 252, 0.3);
+  padding-bottom: 10px;
 }
 
 .category-menu {
-  border-right: none;
+  height: calc(100% - 60px); /* 减去标题和padding的高度 */
+  overflow-y: auto;
+  scrollbar-width: thin;
   background: transparent;
+  border: none;
+  
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(250, 159, 252, 0.1);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(250, 159, 252, 0.3);
+    border-radius: 3px;
+  }
 }
 
-:deep(.el-menu) {
+/* Element Plus 菜单样式覆盖 */
+.category-menu :deep(.el-menu) {
   background: transparent;
   border: none;
 }
 
-:deep(.el-menu-item) {
-  background: transparent;
+.category-menu :deep(.el-menu-item) {
   color: #fff;
-  text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  transition: all 0.3s ease;
   border-left: 2px solid transparent;
-  transition: all 0.3s;
+  background: transparent;
+  
+  &:hover {
+    background: rgba(250, 159, 252, 0.1);
+    border-left: 2px solid #FA9FFC;
+    box-shadow: 
+      inset 0 0 15px rgba(250, 159, 252, 0.1),
+      0 0 10px rgba(250, 159, 252, 0.2);
+  }
 }
 
-:deep(.el-menu-item:hover) {
-  background: rgba(0, 255, 255, 0.1);
-  border-left: 2px solid #00FFFF;
-  color: #00FFFF;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+/* 激活状态的菜单项 */
+.category-menu :deep(.el-menu-item.is-active) {
+  background: rgba(250, 159, 252, 0.15);
+  color: #FA9FFC;
+  border-left: 2px solid #FA9FFC;
+  box-shadow: 
+    inset 0 0 15px rgba(250, 159, 252, 0.1),
+    0 0 10px rgba(250, 159, 252, 0.2);
 }
 
 .sub-menu {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  width: 200px;
-  padding: 15px;
+  background: rgba(6, 5, 36, 0.95);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(250, 159, 252, 0.3);
+  box-shadow: 
+    0 5px 15px rgba(250, 159, 252, 0.2),
+    inset 0 0 20px rgba(250, 159, 252, 0.1);
   border-radius: 4px;
-  z-index: 30;
-  background: rgba(13, 13, 48, 0.95);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-@keyframes hologramAppear {
-  0% {
-    opacity: 0;
-    transform: translateX(-10px) skewX(5deg);
-    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) skewX(0);
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-  }
-}
-
-.sub-menu::before {
-  content: '';
+  padding: 15px;
   position: absolute;
+  left: 100%;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    transparent 0%,
-    rgba(0, 255, 255, 0.15) 50%,
-    transparent 100%
-  );
-  height: 30px; /* 适当增加扫描线的高度 */
-  opacity: 0.6; /* 提高扫描线的不透明度 */
-  animation: scanline 2s linear infinite;
-}
-
-@keyframes scanline {
-  0% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(calc(100% - 30px)); /* 确保扫描线不会超出菜单范围 */
-  }
+  min-width: 200px;
+  z-index: 100;
+  height: 100%;  /* 与父容器等高 */
+  display: flex;
+  flex-direction: column;
 }
 
 .sub-menu h3 {
+  color: #FA9FFC;
+  text-shadow: 
+    0 0 10px rgba(250, 159, 252, 0.5),
+    0 0 20px rgba(250, 159, 252, 0.3);
   margin-bottom: 15px;
-  color: #fff;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
-  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
   padding-bottom: 10px;
-  font-size: 16px;
+  border-bottom: 1px solid rgba(250, 159, 252, 0.3);
 }
 
 .sub-categories {
+  flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  max-height: 300px;
-  overflow-y: auto;
+  padding: 5px;
+  align-content: flex-start;  /* 确保从顶部开始排列 */
+  
+  /* 滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(250, 159, 252, 0.1);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(250, 159, 252, 0.3);
+    border-radius: 2px;
+  }
 }
 
 .sub-category {
-  padding: 5px 10px;
-  cursor: pointer;
+  display: inline-block;
+  padding: 4px 12px;
+  margin: 3px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  transition: all 0.3s;
-}
-
-.sub-category:hover {
-  background: rgba(0, 255, 255, 0.2);
-  transform: translateY(-2px);
+  cursor: pointer;
+  color: #fff;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(250, 159, 252, 0.2);
+  background: rgba(250, 159, 252, 0.05);
+  white-space: nowrap;  /* 防止文字换行 */
+  
+  &:hover {
+    background: rgba(250, 159, 252, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 
+      0 5px 15px rgba(250, 159, 252, 0.2),
+      inset 0 0 10px rgba(250, 159, 252, 0.1);
+  }
 }
 
 .el-menu-item {
@@ -663,17 +827,17 @@ const handleSubCategoryClick = (subCategory) => {
   text-align: center;
   background: linear-gradient(
     45deg,
-    rgba(13, 13, 48, 0.95),
-    rgba(23, 12, 45, 0.95)
+    rgba(6, 5, 36, 0.95),
+    rgba(36, 13, 254, 0.15)
   );
-  border: 2px solid #00FFFF;
+  border: 2px solid #24D0FE;
   clip-path: polygon(0 5%, 95% 0, 100% 95%, 5% 100%);
   transform: perspective(1000px) rotateX(5deg);
   border-radius: 8px;
   padding: 10px;
   box-shadow: 
-    0 0 15px rgba(0, 255, 255, 0.2),
-    inset 0 0 10px rgba(255, 0, 255, 0.1);
+    0 0 15px rgba(36, 208, 254, 0.2),
+    inset 0 0 10px rgba(250, 159, 252, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -696,39 +860,39 @@ const handleSubCategoryClick = (subCategory) => {
   margin: 10px 0;
   color: #fff;
   text-shadow: 
-    0 0 5px rgba(0, 255, 255, 0.5),
-    0 0 10px rgba(255, 0, 255, 0.3);
+    0 0 5px rgba(36, 208, 254, 0.5),
+    0 0 10px rgba(250, 159, 252, 0.3);
 }
 
 .product-info p {
-  color: #00FFFF;
+  color: #24D0FE;
   text-shadow: 
-    0 0 5px rgba(0, 255, 255, 0.5),
-    0 0 10px rgba(255, 0, 255, 0.3);
+    0 0 5px rgba(36, 208, 254, 0.5),
+    0 0 10px rgba(250, 159, 252, 0.3);
 }
 
 :deep(.el-input__wrapper) {
-  background: rgba(13, 13, 48, 0.8);
-  border: 2px solid #00FFFF;
+  background: rgba(6, 5, 36, 0.8);
+  border: 2px solid #24D0FE;
   box-shadow: none;
   transition: all 0.3s ease;
 }
 
 :deep(.el-input__wrapper.is-focus) {
   box-shadow: 
-    0 0 15px rgba(0, 255, 255, 0.3),
-    inset 0 0 10px rgba(0, 255, 255, 0.2);
-  border-color: #00FFFF;
+    0 0 15px rgba(36, 208, 254, 0.3),
+    inset 0 0 10px rgba(36, 208, 254, 0.2);
+  border-color: #24D0FE;
 }
 
 :deep(.el-input__inner) {
-  color: #00FFFF;
+  color: #24D0FE;
   font-family: 'Courier New', monospace;
   letter-spacing: 1px;
 }
 
 :deep(.el-input__inner::placeholder) {
-  color: rgba(0, 255, 255, 0.5);
+  color: rgba(36, 208, 254, 0.5);
 }
 
 :deep(.el-button) {
@@ -2014,33 +2178,92 @@ const handleSubCategoryClick = (subCategory) => {
 /* 响应式轮播图 */
 @media screen and (max-width: 768px) {
   .carousel {
-    height: 200px;
-    margin-bottom: 20px;
+    margin-top: 20px;
+    width: 100% !important;
+  }
+  
+  .carousel :deep(.el-carousel__item) {
+    width: 100% !important;
+    transform: none !important;
+  }
+  
+  .carousel :deep(.el-carousel__item--card) {
+    width: 90% !important;
+    transform: none !important;
+  }
+  
+  .carousel-image {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+    border-radius: 0;
+  }
+  
+  /* 调整指示器位置 */
+  .carousel :deep(.el-carousel__indicators) {
+    transform: translateY(10px);
+    bottom: -20px;
+  }
+  
+  /* 调整轮播图箭头位置 */
+  .carousel :deep(.el-carousel__arrow) {
+    transform: translateY(-50%);
+    background-color: rgba(250, 159, 252, 0.3);
+    
+    &:hover {
+      background-color: rgba(250, 159, 252, 0.5);
+    }
+  }
+  
+  /* 优化商品卡片在移动端的显示 */
+  .product-card {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    
+    .product-image {
+      width: 100%;
+      height: 180px;
+      
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    
+    .product-info {
+      flex: 1;
+      padding: 15px;
+      
+      h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      
+      .price {
+        font-size: 18px;
+        margin-bottom: 10px;
+      }
+      
+      .description {
+        font-size: 14px;
+        margin-bottom: 15px;
+        height: auto;
+        max-height: 40px;
+      }
+    }
   }
 }
 
-/* 响应式商品卡片 */
-@media screen and (max-width: 768px) {
-  .product-card {
-    margin-bottom: 15px;
-  }
-
-  .product-info {
-    padding: 10px;
-  }
-
-  .product-info h3 {
-    font-size: 14px;
-  }
-
-  .product-info p {
-    font-size: 16px;
-  }
-
-  .product-info .el-button {
-    width: 100%;
-    padding: 8px;
-    font-size: 14px;
+/* 调整商品列表容器的间距 */
+.products {
+  margin-top: 40px;
+  padding: 0 15px;
+  
+  @media screen and (max-width: 768px) {
+    margin-top: 30px;
+    padding: 0 10px;
   }
 }
 
@@ -2712,5 +2935,362 @@ const handleSubCategoryClick = (subCategory) => {
 /* 确保内容不被导航栏遮挡 */
 .main-content {
   padding-top: 10px;
+}
+
+/* 自定义轮播图切换动画 */
+.carousel :deep(.el-carousel__item--card.is-in-stage) {
+  position: absolute;
+  z-index: 1;
+}
+
+.carousel :deep(.el-carousel__item--card.is-active) {
+  transform: translateZ(0) scale(1);
+  opacity: 1;
+  z-index: 2;
+}
+
+/* 向左切换时的动画 */
+.carousel :deep(.el-carousel__item--card.is-moving-left) {
+  transform: translate3d(-50%, -50%, -500px) scale(0.3);
+  opacity: 0;
+  z-index: 0;
+}
+
+/* 向右切换时的动画 */
+.carousel :deep(.el-carousel__item--card.is-moving-right) {
+  transform: translate3d(50%, 50%, -500px) scale(0.3);
+  opacity: 0;
+  z-index: 0;
+}
+
+/* 即将进入的项目 */
+.carousel :deep(.el-carousel__item--card.is-coming) {
+  transform: translate3d(0, 0, -200px) scale(0.6);
+  opacity: 0;
+  z-index: 1;
+}
+
+@keyframes zoomInCenter {
+  from {
+    transform: translate3d(0, 0, -200px) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: translateZ(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes zoomOutTopLeft {
+  from {
+    transform: translateZ(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate3d(-50%, -50%, -500px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* 移动端分类展示的样式调整 */
+.mobile-categories {
+  margin-top: 40px;  /* 移动端也增加顶部间距 */
+  background: rgba(6, 5, 36, 0.8);
+  border-radius: 4px;
+  padding: 15px;
+}
+
+/* 移动端样式 */
+.mobile-categories {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.mobile-categories h2 {
+  color: #FA9FFC;
+  text-shadow: 
+    0 0 10px rgba(250, 159, 252, 0.5),
+    0 0 20px rgba(250, 159, 252, 0.3);
+  margin-bottom: 15px;
+  font-size: 1.2em;
+}
+
+:deep(.el-collapse) {
+  border: none;
+  background: transparent;
+}
+
+:deep(.el-collapse-item__header) {
+  background: transparent;
+  color: #fff;
+  border-bottom: 1px solid rgba(250, 159, 252, 0.2);
+  
+  &:hover {
+    background: rgba(250, 159, 252, 0.1);
+  }
+}
+
+:deep(.el-collapse-item__content) {
+  background: transparent;
+  color: #fff;
+  padding: 10px;
+}
+
+.mobile-sub-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.mobile-sub-category {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+/* 移动端亮色模式样式 */
+ .home-container.light-theme .mobile-categories {
+   background: rgba(255, 255, 255, 0.9);
+   
+   h2 {
+     color: #FF6B6B;
+     text-shadow: 
+       0 0 10px rgba(255, 107, 107, 0.4),
+       0 0 20px rgba(255, 107, 107, 0.2);
+   }
+   
+  :deep(.el-collapse) {
+     border: none;
+     background: transparent;
+   }
+   
+   :deep(.el-collapse-item__header) {
+     background: transparent;
+     color: #666;
+     border-bottom: 1px solid rgba(255, 107, 107, 0.2);
+     
+     &:hover {
+       background: rgba(255, 107, 107, 0.1);
+       color: #FF6B6B;
+     }
+   }
+   
+   :deep(.el-collapse-item__content) {
+     background: transparent;     color: #666;
+   }
+   
+   .mobile-sub-category {
+    background: rgba(255, 107, 107, 0.05);
+     border: 1px solid rgba(255, 107, 107, 0.2);
+     color: #666;
+     
+     &:hover {
+       background: rgba(255, 107, 107, 0.15);
+       color: #FF6B6B;
+       box-shadow: 
+         0 5px 15px rgba(255, 107, 107, 0.2),
+         inset 0 0 10px rgba(255, 107, 107, 0.1);
+     }
+   }
+ }
+
+.mobile-sub-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.mobile-sub-category {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+/* 移动端分类展示样式 */
+.mobile-categories {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* 移动端暗色模式样式 */
+.home-container:not(.light-theme) .mobile-categories {
+  background: rgba(6, 5, 36, 0.8);
+}
+
+.home-container:not(.light-theme) .mobile-categories h2 {
+  color: #FA9FFC;
+  text-shadow: 
+    0 0 10px rgba(250, 159, 252, 0.5),
+    0 0 20px rgba(250, 159, 252, 0.3);
+  margin-bottom: 15px;
+  font-size: 1.2em;
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse) {
+  border: none;
+  background: transparent;
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__header) {
+  background: transparent;
+  color: #fff;
+  border-bottom: 1px solid rgba(250, 159, 252, 0.2);
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__header):hover {
+  background: rgba(250, 159, 252, 0.1);
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__content) {
+  background: transparent;
+  color: #fff;
+  padding: 10px;
+}
+
+/* 移动端亮色模式样式 */
+.home-container.light-theme .mobile-categories {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.home-container.light-theme .mobile-categories h2 {
+  color: #FF6B6B;
+  text-shadow: 
+    0 0 10px rgba(255, 107, 107, 0.4),
+    0 0 20px rgba(255, 107, 107, 0.2);
+}
+
+.home-container.light-theme .mobile-categories :deep(.el-collapse) {
+  border: none;
+  background: transparent;
+}
+
+.home-container.light-theme .mobile-categories :deep(.el-collapse-item__header) {
+  background: transparent;
+  color: #666;
+  border-bottom: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+.home-container.light-theme .mobile-categories :deep(.el-collapse-item__header):hover {
+  background: rgba(255, 107, 107, 0.1);
+  color: #FF6B6B;
+}
+
+.home-container.light-theme .mobile-categories :deep(.el-collapse-item__content) {
+  background: transparent;
+  color: #666;
+}
+
+.home-container.light-theme .mobile-categories .mobile-sub-category {
+  background: rgba(255, 107, 107, 0.05);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  color: #666;
+}
+
+.home-container.light-theme .mobile-categories .mobile-sub-category:hover {
+  background: rgba(255, 107, 107, 0.15);
+  color: #FF6B6B;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 5px 15px rgba(255, 107, 107, 0.2),
+    inset 0 0 10px rgba(255, 107, 107, 0.1);
+}
+
+.mobile-sub-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.mobile-sub-category {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+/* 移动端暗色模式样式 */
+.home-container:not(.light-theme) .mobile-categories {
+  background: rgba(6, 5, 36, 0.8);
+}
+
+.home-container:not(.light-theme) .mobile-categories h2 {
+  color: #FA9FFC;
+  text-shadow: 
+    0 0 10px rgba(250, 159, 252, 0.5),
+    0 0 20px rgba(250, 159, 252, 0.3);
+  margin-bottom: 15px;
+  font-size: 1.2em;
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse) {
+  border: none;
+  background: transparent;
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__header) {
+  background: transparent;
+  color: #fff;
+  border-bottom: 1px solid rgba(250, 159, 252, 0.2);
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__header):hover {
+  background: rgba(250, 159, 252, 0.1);
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__content) {
+  background: transparent;
+  color: #fff;
+  padding: 10px;
+}
+
+/* 修复折叠面板的背景色 */
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item__wrap) {
+  background: transparent;
+  border-bottom: none;
+}
+
+.home-container:not(.light-theme) .mobile-categories :deep(.el-collapse-item) {
+  background: transparent;
+  margin-bottom: 4px;
+}
+
+/* 移动端暗色模式子分类样式 */
+.home-container:not(.light-theme) .mobile-categories .mobile-sub-category {
+  background: rgba(250, 159, 252, 0.05);
+  border: 1px solid rgba(250, 159, 252, 0.2);
+  color: #fff;
+}
+
+.home-container:not(.light-theme) .mobile-categories .mobile-sub-category:hover {
+  background: rgba(250, 159, 252, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 5px 15px rgba(250, 159, 252, 0.2),
+    inset 0 0 10px rgba(250, 159, 252, 0.1);
+}
+
+/* 亮色模式也需要相应的修复 */
+.home-container.light-theme .mobile-categories :deep(.el-collapse-item__wrap) {
+  background: transparent;
+  border-bottom: none;
+}
+
+.home-container.light-theme .mobile-categories :deep(.el-collapse-item) {
+  background: transparent;
+  margin-bottom: 4px;
 }
 </style> 
