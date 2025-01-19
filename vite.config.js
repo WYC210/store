@@ -1,4 +1,5 @@
 export default defineConfig({
+  assetsInclude: ['**/*.ico'],
   // ...其他配置
   server: {
     proxy: {

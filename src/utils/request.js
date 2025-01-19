@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: 'http://localhost:8088',
+  baseURL: 'http://192.168.0.102:8088',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
