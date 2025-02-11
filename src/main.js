@@ -6,6 +6,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { createPinia } from 'pinia'
 import 'element-plus/dist/index.css'
 import './assets/styles/global.css'
+import './assets/styles/theme.css'
 
 const app = createApp(App)
 const pinia = createPinia()

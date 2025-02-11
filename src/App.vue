@@ -1,29 +1,39 @@
 <template>
-  <router-view></router-view>
+  <div class="dream-theme">
+    <router-view></router-view>
+  </div>
 </template>
 
 <script setup>
-import { onUnmounted, onMounted } from 'vue'
-import { provideAnimationManager } from './composables/useAnimationManager'
-import { useUserStore } from '@/stores/user'
+import { onUnmounted, onMounted } from "vue";
+import { provideAnimationManager } from "./composables/useAnimationManager";
+import { useUserStore } from "@/stores/user";
+import { useOrderStore } from "@/stores/order";
+import { useCategoryStore } from "@/stores/category";
+import { useTheme } from './views/home/composables/useTheme'
 
-const animationManager = provideAnimationManager()
-const userStore = useUserStore()
+const animationManager = provideAnimationManager();
+const userStore = useUserStore();
+const orderStore = useOrderStore();
+const categoryStore = useCategoryStore();
+const { isDarkTheme } = useTheme()
 
 onUnmounted(() => {
-  animationManager.cleanup()
-})
+  animationManager.cleanup();
+});
 
 onMounted(async () => {
   try {
-    const token = document.cookie.includes('AUTH-TOKEN')
+    const token = document.cookie.includes("AUTH-TOKEN");
     if (token) {
-      await userStore.validateToken()
+      await userStore.validateToken();
     }
+    
+    await categoryStore.fetchCategories();
   } catch (error) {
-    console.error('Token validation error:', error)
+    console.error("Error during initialization:", error);
   }
-})
+});
 </script>
 
 <style>
@@ -34,7 +44,7 @@ onMounted(async () => {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 }
 </style>

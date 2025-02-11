@@ -18,6 +18,7 @@
         </div>
         <h2>登录</h2>
         <p class="welcome-text">请输入您的账号密码</p>
+         
       </div>
       
       <el-form 
@@ -29,6 +30,7 @@
           <el-input 
             v-model="formData.username"
             placeholder="请输入用户名"
+             autocomplete="username"
             size="large"
           >
             <template #prefix>
@@ -44,6 +46,7 @@
             placeholder="请输入密码"
             size="large"
             show-password
+            autocomplete="current-password"
           >
             <template #prefix>
               <el-icon><Lock /></el-icon>

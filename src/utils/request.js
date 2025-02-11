@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: 'http://192.168.0.102:8088',
+  baseURL: 'http://192.168.125.251:8088',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
@@ -46,6 +46,11 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
+    // 打印响应数据，方便调试
+    console.log('API Response:', {
+      url: response.config.url,
+      data: response.data
+    })
     // 如果响应头中包含新的 token，更新 cookie
     const newToken = response.headers['new-token']
     if (newToken) {
@@ -66,7 +71,13 @@ request.interceptors.response.use(
     return response.data
   },
   error => {
-    console.error('Request error:', error)
+    // 打印详细错误信息
+    console.error('API Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message,
+      response: error.response?.data
+    })
     // 如果是 401 错误，可能是 cookie 过期
     if (error.response && error.response.status === 401) {
       // 清除无效的 token

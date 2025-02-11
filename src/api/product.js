@@ -1,28 +1,31 @@
 import request from '@/utils/request'
 
-// 获取商品列表
-export const getProducts = (params = {}) => {
-  const { 
+// 获取商品列表（支持筛选和排序）
+export const getProducts = async (params = {}) => {
+  const {
+    pageNum = 1,
+    pageSize = 10,
     categoryId,
     keyword,
-    page = 1,
-    size = 10 
   } = params
 
   return request({
     url: '/products',
     method: 'get',
     params: {
+      pageNum,
+      pageSize,
       categoryId,
       keyword,
-      page,
-      size
     }
   })
 }
 
 // 获取商品详情
-export const getProductById = (id) => {
+export const getProductById = async (id) => {
+  if (!id) {
+    throw new Error('商品ID不能为空')
+  }
   return request({
     url: `/products/${id}`,
     method: 'get'
@@ -30,23 +33,89 @@ export const getProductById = (id) => {
 }
 
 // 添加到购物车
-export const addToCart = (productId, quantity = 1) => {
+export const addToCart = async (productId, quantity = 1) => {
+  if (!productId) {
+    throw new Error('商品ID不能为空')
+  }
   return request({
     url: '/cart/add',
     method: 'post',
-    data: {
-      productId,
-      quantity
-    },
-    withCredentials: true
+    data: { 
+      productId, 
+      quantity: Math.max(1, Math.floor(quantity)) // 确保数量是正整数
+    }
   })
 }
 
 // 获取分类列表
-export function getCategories() {
+export const getCategories = async () => {
   return request({
     url: '/categories',
     method: 'get',
-    withCredentials: true
   })
+}
+
+// 获取商品详细信息（包含配置选项和评论）
+export const getProductDetails = async (productId) => {
+  if (!productId) {
+    throw new Error('商品ID不能为空')
+  }
+  return request({
+    url: `/products/${productId}/details`,
+    method: 'get',
+    params: {
+      includeOptions: true,  // 包含配置选项
+      includeComments: true  // 包含评论
+    }
+  })
+}
+
+// 获取商品图片列表
+export const getProductImages = async (productId) => {
+  if (!productId) {
+    throw new Error('商品ID不能为空')
+  }
+  return request({
+    url: `/products/${productId}/images`,
+    method: 'get',
+    params: {
+      limit: 5  // 限制图片数量
+    }
+  })
+}
+
+// 获取最新评论（用于弹幕）
+export const getLatestComments = async (productId, limit = 5) => {
+  if (!productId) {
+    throw new Error('商品ID不能为空')
+  }
+  return request({
+    url: `/products/${productId}/comments/latest`,
+    method: 'get',
+    params: { 
+      limit,
+      sort: 'createdTime,desc'  // 按时间倒序
+    }
+  })
+}
+
+// 批量获取商品信息
+export const batchGetProducts = async (productIds) => {
+  if (!Array.isArray(productIds) || !productIds.length) {
+    return []
+  }
+  
+  try {
+    const results = await Promise.allSettled(
+      productIds.map(id => getProductById(id))
+    )
+    
+    return results
+      .filter(result => result.status === 'fulfilled')
+      .map(result => result.value?.data)
+      .filter(Boolean)
+  } catch (error) {
+    console.error('批量获取商品信息失败:', error)
+    return []
+  }
 } 

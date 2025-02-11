@@ -120,12 +120,12 @@ input, textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: rgba(42, 9, 68, 0.25);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(42, 9, 68, 0.25);
 }
 
 /* 添加触摸反馈效果 */

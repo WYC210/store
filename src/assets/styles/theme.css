@@ -1,0 +1,254 @@
+/* 新增星空背景 */
+body::before {
+    content: '';
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    background:
+        radial-gradient(circle at 20% 30%,
+            rgba(255, 97, 210, 0.15) 0%,
+            transparent 50%),
+        radial-gradient(circle at 80% 70%,
+            rgba(80, 250, 170, 0.15) 0%,
+            transparent 50%);
+    z-index: -1;
+    animation: cosmicFlow 20s linear infinite;
+}
+
+/* 统一的动画定义 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 更新使用新的动画名称 */
+.star-particle {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 增强背景渐变 */
+body {
+    background:
+        radial-gradient(ellipse at top right,
+            rgba(255, 97, 210, 0.15) 0%,
+            transparent 40%),
+        linear-gradient(135deg,
+            var(--deep-space) 0%,
+            var(--mystic-purple) 40%,
+            var(--aurora-pink) 100%);
+    background-attachment: fixed;
+}
+
+/* 魔法光晕效果 */
+.dream-card::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg,
+            var(--aurora-pink),
+            var(--cosmic-blue),
+            var(--nebula-green));
+    z-index: -1;
+    filter: blur(20px);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.dream-card:hover::after {
+    opacity: 0.3;
+}
+
+/* 增强文字效果 */
+.magic-text {
+    text-shadow: 0 0 10px rgba(255, 97, 210, 0.5);
+}
+
+/* 增强按钮效果 */
+.hologram-btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.hologram-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg,
+            transparent 25%,
+            rgba(255, 255, 255, 0.2) 50%,
+            transparent 75%);
+    transform: rotate(45deg);
+    animation: btnGlow 3s linear infinite;
+}
+
+@keyframes btnGlow {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+
+    100% {
+        transform: translateX(100%) rotate(45deg);
+    }
+}
+
+/* 增强表单效果 */
+.el-input__inner:focus {
+    box-shadow: 0 0 15px var(--aurora-pink);
+    border-color: var(--cosmic-blue) !important;
+}
+
+/* 新增悬浮特效 */
+.float-effect {
+    animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+/* 增强滚动条 */
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg,
+            var(--aurora-pink),
+            var(--cosmic-blue),
+            var(--nebula-green));
+}
+
+/* 1. 创建通用样式类 */
+.dream-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border-radius: 15px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 0 30px rgba(173, 216, 230, 0.2);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dream-card:hover {
+  transform: translateY(-10px) perspective(1000px) rotateX(10deg);
+  box-shadow: 0 0 50px rgba(255, 105, 180, 0.4);
+}
+
+.magic-text {
+  background: var(--magic-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientShift 8s ease infinite;
+}
+
+.glow-effect {
+  position: relative;
+}
+
+.glow-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center,
+    rgba(255, 218, 121, 0.8) 0%,
+    rgba(255, 97, 210, 0.6) 25%,
+    rgba(108, 92, 231, 0.4) 50%,
+    rgba(168, 237, 234, 0.2) 75%,
+    transparent 100%
+  );
+  filter: blur(15px);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glow-effect:hover::after {
+  opacity: 0.6;
+}
+
+/* 梦幻主题 */
+.dream-theme {
+  /* 基础颜色 */
+  --deep-space: #0a0a2e;      /* 深空蓝 */
+  --mystic-purple: #2a0944;   /* 神秘紫 */
+  --starlight: #f6d860;       /* 星芒黄 */
+  --aurora-pink: #ff61d2;     /* 极光粉 */
+  --cosmic-blue: #4d4dff;     /* 宇宙蓝 */
+  --nebula-green: #50faaa;    /* 星云绿 */
+
+  /* 渐变效果 */
+  --magic-gradient: linear-gradient(45deg, 
+    #ff6b6b 20%, 
+    #ffd93d 40%, 
+    #6c5ce7 60%, 
+    #a8edea 80%
+  );
+
+  /* 背景效果 */
+  background: 
+    radial-gradient(ellipse at top right,
+      rgba(255, 97, 210, 0.15) 0%,
+      transparent 40%),
+    linear-gradient(135deg,
+      var(--deep-space) 0%,
+      var(--mystic-purple) 40%,
+      var(--aurora-pink) 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* 全局动画 */
+@keyframes cosmicFlow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes neonPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.4; }
+}
+
+/* 全局过渡效果 */
+* {
+  transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.magic-border::before {
+  background-size: 200% 200%;
+  animation: flow 4s linear infinite;
+}
