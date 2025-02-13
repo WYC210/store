@@ -3,10 +3,11 @@ import axios from 'axios'
 import { getCookie, removeCookie } from '@/utils/cookie'
 import router from '@/router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: 'http://192.168.125.251:8088',
+  baseURL: 'http://localhost:8088/',
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json'
@@ -31,14 +32,28 @@ const isAuthRequired = (url) => {
 request.interceptors.request.use(
   config => {
     config.withCredentials = true
+    
     // 从 cookie 中获取 token
     const token = getCookie('token')
+    console.log('当前 token:', token)  // 调试用
+    
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
+      // 设置请求头的 Authorization，加上 Bearer 前缀
+      config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`
     }
+
+    console.log('发送请求:', {
+      url: config.url,
+      method: config.method,
+      params: config.params,
+      data: config.data,
+      headers: config.headers
+    })
+
     return config
   },
   error => {
+    console.error('请求错误:', error)
     return Promise.reject(error)
   }
 )
@@ -52,19 +67,26 @@ request.interceptors.response.use(
       data: response.data
     })
     // 如果响应头中包含新的 token，更新 cookie
-    const newToken = response.headers['new-token']
+    const newToken = response.headers['new-token'] || response.headers['authorization']
     if (newToken) {
-      setCookie('token', newToken, {
+      const token = newToken.replace('Bearer ', '')
+      setCookie('token', token, {
         path: '/',
         maxAge: 7 * 24 * 60 * 60
       })
+      console.log('Token 已更新:', token)
     }
     if (response.data.state === 500) {
       return Promise.reject(new Error(response.data.message))
     }
     if (response.data.state === 401) {
       if (response.config.withCredentials) {
-        router.push('/login')
+        const userStore = useUserStore()
+        userStore.logout()
+        router.push({
+          path: '/login',
+          query: { redirect: router.currentRoute.value.fullPath }
+        })
         return Promise.reject(new Error('请先登录'))
       }
     }
@@ -76,7 +98,8 @@ request.interceptors.response.use(
       url: error.config?.url,
       status: error.response?.status,
       message: error.message,
-      response: error.response?.data
+      response: error.response?.data,
+      fullError: error
     })
     // 如果是 401 错误，可能是 cookie 过期
     if (error.response && error.response.status === 401) {

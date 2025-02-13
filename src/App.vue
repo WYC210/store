@@ -10,13 +10,13 @@ import { provideAnimationManager } from "./composables/useAnimationManager";
 import { useUserStore } from "@/stores/user";
 import { useOrderStore } from "@/stores/order";
 import { useCategoryStore } from "@/stores/category";
-import { useTheme } from './views/home/composables/useTheme'
+import { useTheme } from "./views/home/composables/useTheme";
 
 const animationManager = provideAnimationManager();
 const userStore = useUserStore();
 const orderStore = useOrderStore();
 const categoryStore = useCategoryStore();
-const { isDarkTheme } = useTheme()
+const { isDarkTheme } = useTheme();
 
 onUnmounted(() => {
   animationManager.cleanup();
@@ -28,7 +28,7 @@ onMounted(async () => {
     if (token) {
       await userStore.validateToken();
     }
-    
+
     await categoryStore.fetchCategories();
   } catch (error) {
     console.error("Error during initialization:", error);

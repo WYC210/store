@@ -6,79 +6,56 @@ import router from '@/router'
 export const useUserStore = defineStore('user', {
   state: () => ({
     userInfo: null,
-    isAuthenticated: false
+    _isLoggedIn: false,
   }),
 
   getters: {
-    isLoggedIn: (state) => state.isAuthenticated && !!state.userInfo
+    isLoggedIn: (state) => state._isLoggedIn
   },
 
   actions: {
     setUserInfo(info) {
       this.userInfo = info
-      this.isAuthenticated = true
+      this._isLoggedIn = true
       localStorage.setItem('userInfo', JSON.stringify(info))
-      localStorage.setItem('isAuthenticated', 'true')
     },
 
-    async login(userData) {
+    async login(credentials) {
       try {
-        const response = await login({
-          username: userData.username.trim(),
-          password: userData.password
-        })
-
+        const response = await login(credentials)
         if (response.state === 200 && response.data) {
-          // 保存登录返回的 token
           const { token, ...userInfo } = response.data
-          if (token) {
-            setCookie('token', token, {
-              path: '/',
-              maxAge: 7 * 24 * 60 * 60  // 7天有效期
-            })
-          }
           
-          // 直接使用登录响应中的用户信息
-          this.setUserInfo({
-            uid: userInfo.uid,
-            username: userInfo.username,
-            avatar: userInfo.avatar,
-            power: userInfo.power,
-            phone: userInfo.phone,
-            email: userInfo.email,
-            gender: userInfo.gender,
-            createdTime: userInfo.createdTime,
-            modifiedTime: userInfo.modifiedTime
-          })
+          // 保存 token 到 cookie
+          if (token) {
+            // 去掉 "Bearer " 前缀
+            const tokenValue = token.replace('Bearer ', '')
+            setCookie('token', tokenValue, {
+              path: '/',
+              maxAge: 7 * 24 * 60 * 60,  // 7天有效期（秒）
+              secure: false  // 开发环境设置为 false
+            })
+            console.log('Token saved:', tokenValue) // 调试用
+          }
 
-          return response
-        } else {
-          throw new Error(response.message || '登录失败')
+          // 保存用户信息
+          this.userInfo = userInfo
+          this._isLoggedIn = true
+          localStorage.setItem('userInfo', JSON.stringify(userInfo))
+
+          return true
         }
+        return false
       } catch (error) {
-        console.error('Login error:', error)
-        this.clearUserInfo()
-        removeCookie('token')
-        throw error
+        console.error('登录失败:', error)
+        return false
       }
     },
 
-    async logout() {
-      try {
-        this.clearUserInfo()
-        router.push('/login')
-      } catch (error) {
-        console.error('Logout error:', error)
-        throw error
-      }
-    },
-
-    clearUserInfo() {
+    logout() {
       this.userInfo = null
-      this.isAuthenticated = false
+      this._isLoggedIn = false
       localStorage.removeItem('userInfo')
-      localStorage.removeItem('isAuthenticated')
-      // 确保清除 cookie
       removeCookie('token')
     },
 
@@ -108,22 +85,23 @@ export const useUserStore = defineStore('user', {
         }
         
         // 如果没有有效的用户信息，清除状态
-        this.clearUserInfo()
+        this.logout()
         return false
       } catch (error) {
         console.error('Validate token error:', error)
-        this.clearUserInfo()
+        this.logout()
         throw error
       }
     },
 
     initializeFromStorage() {
-      const savedUserInfo = localStorage.getItem('userInfo')
-      const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-      
-      if (savedUserInfo && isAuthenticated) {
-        this.userInfo = JSON.parse(savedUserInfo)
-        this.isAuthenticated = true
+      const userInfo = localStorage.getItem('userInfo')
+      const token = getCookie('token')
+      if (userInfo && token) {
+        this.userInfo = JSON.parse(userInfo)
+        this._isLoggedIn = true
+      } else {
+        this.logout()
       }
     }
   }

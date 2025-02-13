@@ -1,19 +1,19 @@
 <template>
   <div class="home-container" :class="{ 'light-theme': !isDarkTheme }">
     <HomeHeader @search="handleSearch" />
-    
+
     <div class="main-content">
       <el-row :gutter="20">
         <!-- 左侧分类和筛选 -->
         <el-col :xs="24" :sm="24" :md="8" :lg="6">
           <div class="sticky-sidebar">
-            <CategoryMenu 
-              :content-height="contentHeight" 
+            <CategoryMenu
+              :content-height="contentHeight"
               @category-change="handleCategoryChange"
             />
-            <ProductFilter 
+            <ProductFilter
               class="filter-component"
-              @filter-change="handleFilterChange" 
+              @filter-change="handleFilterChange"
             />
           </div>
         </el-col>
@@ -21,12 +21,12 @@
         <!-- 右侧内容区 -->
         <el-col :xs="24" :sm="24" :md="16" :lg="18">
           <HomeCarousel :content-height="contentHeight" />
-          <ProductSorter 
+          <ProductSorter
             class="sorter-component"
             @sort-change="handleSortChange"
             @view-change="handleViewChange"
           />
-          <ProductList 
+          <ProductList
             :view-mode="viewMode"
             :filter-params="filterParams"
             :sort-params="sortParams"
@@ -38,62 +38,66 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { useTheme } from './composables/useTheme'
-import HomeHeader from './components/HomeHeader.vue'
-import CategoryMenu from './components/CategoryMenu.vue'
-import HomeCarousel from './components/HomeCarousel.vue'
-import ProductList from './components/ProductList.vue'
-import ProductSorter from './components/ProductSorter.vue'
-import ProductFilter from './components/ProductFilter.vue'
+import { ref, reactive, onMounted } from "vue";
+import { useTheme } from "./composables/useTheme";
+import HomeHeader from "./components/HomeHeader.vue";
+import CategoryMenu from "./components/CategoryMenu.vue";
+import HomeCarousel from "./components/HomeCarousel.vue";
+import ProductList from "@/views/product/components/ProductList.vue";
+import ProductSorter from "@/views/product/components/ProductSorter.vue";
+import ProductFilter from "@/views/product/components/ProductFilter.vue";
 
-const { isDarkTheme } = useTheme()
-const contentHeight = ref('400px')
-const viewMode = ref('grid')
+const { isDarkTheme } = useTheme();
+const contentHeight = ref("400px");
+const viewMode = ref("grid");
 
 // 筛选参数
 const filterParams = reactive({
   categoryId: null,
   price: {
     min: null,
-    max: null
+    max: null,
   },
   ratings: [],
-  tags: []
-})
+  tags: [],
+});
 
 // 排序参数
 const sortParams = reactive({
-  field: 'default',
-  order: 'desc'
-})
+  field: "default",
+  order: "desc",
+});
 
 // 处理搜索
 const handleSearch = (keyword) => {
-  filterParams.keyword = keyword
-}
+  filterParams.keyword = keyword;
+};
 
 // 处理分类变化
 const handleCategoryChange = (category) => {
-  filterParams.categoryId = category.categoryId
+  filterParams.categoryId = category.categoryId;
   // 如果需要，可以在这里触发商品列表的重新加载
   // 例如：重新获取商品列表数据
-}
+};
 
 // 处理筛选条件变化
 const handleFilterChange = (filters) => {
-  Object.assign(filterParams, filters)
-}
+  Object.assign(filterParams, filters);
+};
 
 // 处理排序方式变化
 const handleSortChange = (sort) => {
-  sortParams.field = sort
-}
+  sortParams.field = sort;
+};
 
 // 处理视图模式变化
 const handleViewChange = (mode) => {
-  viewMode.value = mode
-}
+  viewMode.value = mode;
+};
+
+onMounted(() => {
+  console.log("首页组件已加载");
+});
 </script>
 
 <style scoped>
@@ -147,13 +151,13 @@ const handleViewChange = (mode) => {
   .main-content {
     padding: 10px;
   }
-  
+
   .sticky-sidebar {
     position: static;
     max-height: none;
     overflow-y: visible;
   }
-  
+
   .filter-component,
   .sorter-component {
     margin: 10px 0;
@@ -196,4 +200,3 @@ const handleViewChange = (mode) => {
   background: rgba(0, 0, 0, 0.05);
 }
 </style>
-

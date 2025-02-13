@@ -8,9 +8,9 @@ export const createOrder = (orderData) => {
   })
 }
 
-export const payOrder = (paymentData) => {
+export const payOrder = (orderId, paymentData) => {
   return request({
-    url: '/orders/pay',
+    url: `/orders/${orderId}/pay`,
     method: 'POST',
     data: paymentData
   })

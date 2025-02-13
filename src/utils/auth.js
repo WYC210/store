@@ -8,25 +8,17 @@ const SECURITY_CONFIG = {
 }
 
 // 登录时添加安全检查
-export const login = async (userData) => {
+export const login = async (credentials) => {
   try {
-    console.log('Login request:', userData) // 调试用
-    
     const response = await request({
       url: '/users/login',
       method: 'post',
-      data: userData
+      data: credentials,
+      withCredentials: true  // 确保接收和发送 cookie
     })
-    
-    console.log('Login response:', response) // 调试用
-    
-    if (response.state === 200 && response.data) {
-      return response
-    } else {
-      throw new Error(response.message || '登录失败')
-    }
+    return response
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('登录请求失败:', error)
     throw error
   }
 }

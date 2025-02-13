@@ -27,7 +27,17 @@ export function useProducts() {
       console.log('商品列表响应:', response)
       
       if (response?.list) {
-        products.value = response.list
+        products.value = response.list.map(product => ({
+          productId: product.productId,
+          name: product.name,
+          price: product.price,
+          description: product.description,
+          imageUrl: product.imageUrl,
+          stock: product.stock,
+          rating: product.rating || 0,
+          reviewCount: product.reviewCount || 0,
+        }))
+
         Object.assign(pagination, {
           total: response.total || 0,
           pages: response.pages || 1,

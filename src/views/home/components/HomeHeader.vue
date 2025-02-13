@@ -1,12 +1,15 @@
 <template>
-  <header class="navbar" :class="{ 'navbar-fixed': isNavFixed, 'light-theme': !isDarkTheme }">
+  <header
+    class="navbar"
+    :class="{ 'navbar-fixed': isNavFixed, 'light-theme': !isDarkTheme }"
+  >
     <router-link to="/home" class="logo-container">
       <img src="@/assets/logo_w.png" alt="Logo" class="logo" />
       <CyberText />
     </router-link>
-    
+
     <SearchBar @search="handleSearch" />
-    
+
     <div class="theme-switch">
       <el-button
         :icon="isDarkTheme ? 'Sunny' : 'Moon'"
@@ -15,7 +18,7 @@
         class="theme-button"
       />
     </div>
-    
+
     <nav class="nav-links">
       <router-link to="/" class="nav-link hologram-btn glow-effect">
         <el-icon><HomeFilled /></el-icon>
@@ -34,41 +37,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Sunny, Moon } from '@element-plus/icons-vue'
-import { useTheme } from '../composables/useTheme'
-import CyberText from '@/components/CyberText.vue'
-import SearchBar from './SearchBar.vue'
-import { debounce as _debounce } from 'lodash-es'
+import { ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { Sunny, Moon } from "@element-plus/icons-vue";
+import { useTheme } from "../composables/useTheme";
+import CyberText from "@/components/CyberText.vue";
+import SearchBar from "./SearchBar.vue";
+import { debounce as _debounce } from "lodash-es";
 
-const router = useRouter()
-const { isDarkTheme, toggleTheme } = useTheme()
-const isNavFixed = ref(false)
+const router = useRouter();
+const { isDarkTheme, toggleTheme } = useTheme();
+const isNavFixed = ref(false);
 
 // 滚动处理
 const handleScroll = _debounce(() => {
-  isNavFixed.value = window.scrollY > 0
-}, 16)
+  isNavFixed.value = window.scrollY > 0;
+}, 16);
 
 // 导航方法
-const goToHome = () => router.push('/home')
-const goToCart = () => router.push('/cart')
-const goToProfile = () => router.push('/profile')
+const goToHome = () => router.push("/home");
+const goToCart = () => router.push("/cart");
+const goToProfile = () => router.push("/profile");
 
-const emit = defineEmits(['search'])
+const emit = defineEmits(["search"]);
 
 const handleSearch = (keyword) => {
-  emit('search', keyword)
-}
+  emit("search", keyword);
+};
 
 onMounted(() => {
-  window.addEventListener('scroll', handleScroll)
-})
+  window.addEventListener("scroll", handleScroll);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
+  window.removeEventListener("scroll", handleScroll);
+});
 </script>
 
 <style scoped>
@@ -144,12 +147,13 @@ onUnmounted(() => {
   font-weight: 500;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(45deg,
-    rgba(255,0,255,0.8),
-    rgba(0,255,255,0.8)
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 255, 0.8),
+    rgba(0, 255, 255, 0.8)
   );
-  box-shadow: 0 0 20px rgba(0,255,255,0.5),
-            inset 0 0 15px rgba(255,255,255,0.3);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
+    inset 0 0 15px rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
   animation: buttonPulse 2s infinite;
 }
@@ -157,18 +161,19 @@ onUnmounted(() => {
 .nav-link:hover {
   filter: hue-rotate(90deg);
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(0,255,255,0.7),
-            inset 0 0 20px rgba(255,255,255,0.5);
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.7),
+    inset 0 0 20px rgba(255, 255, 255, 0.5);
 }
 
 @keyframes buttonPulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(0,255,255,0.5),
-                inset 0 0 15px rgba(255,255,255,0.3);
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
+      inset 0 0 15px rgba(255, 255, 255, 0.3);
   }
   50% {
-    box-shadow: 0 0 30px rgba(0,255,255,0.7),
-                inset 0 0 25px rgba(255,255,255,0.5);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.7),
+      inset 0 0 25px rgba(255, 255, 255, 0.5);
   }
 }
 
@@ -179,23 +184,25 @@ onUnmounted(() => {
 
 /* 激活状态特效 */
 .nav-link.router-link-active {
-  background: linear-gradient(45deg,
-    rgba(255,0,255,0.9),
-    rgba(0,255,255,0.9)
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 255, 0.9),
+    rgba(0, 255, 255, 0.9)
   );
-  box-shadow: 0 0 40px rgba(0,255,255,0.8),
-            inset 0 0 30px rgba(255,255,255,0.6);
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.8),
+    inset 0 0 30px rgba(255, 255, 255, 0.6);
   animation: activeButtonPulse 2s infinite;
 }
 
 @keyframes activeButtonPulse {
-  0%, 100% {
-    box-shadow: 0 0 40px rgba(0,255,255,0.8),
-                inset 0 0 30px rgba(255,255,255,0.6);
+  0%,
+  100% {
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.8),
+      inset 0 0 30px rgba(255, 255, 255, 0.6);
   }
   50% {
-    box-shadow: 0 0 60px rgba(0,255,255,1),
-                inset 0 0 45px rgba(255,255,255,0.8);
+    box-shadow: 0 0 60px rgba(0, 255, 255, 1),
+      inset 0 0 45px rgba(255, 255, 255, 0.8);
   }
 }
-</style> 
+</style>

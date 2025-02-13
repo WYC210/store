@@ -1,11 +1,14 @@
 <template>
-  <section class="categories" :style="{ height: `${parseInt(contentHeight) + 48}px` }">
+  <section
+    class="categories"
+    :style="{ height: `${parseInt(contentHeight) + 48}px` }"
+  >
     <!-- 移动端分类 -->
     <div class="mobile-categories" v-if="isMobileView">
       <h2>商品分类</h2>
       <el-collapse v-model="activeCollapse" v-loading="categoriesLoading">
-        <el-collapse-item 
-          v-for="category in categories" 
+        <el-collapse-item
+          v-for="category in categories"
           :key="category.categoryId"
           :title="category.name"
           :name="category.categoryId"
@@ -27,14 +30,14 @@
     <!-- 桌面端分类 -->
     <template v-else>
       <h2>商品分类</h2>
-      <el-menu 
+      <el-menu
         v-loading="categoriesLoading"
-        class="category-menu" 
+        class="category-menu"
         :default-active="activeIndex"
         :style="{ height: 'calc(100% - 60px)' }"
       >
-        <el-menu-item 
-          v-for="category in categories" 
+        <el-menu-item
+          v-for="category in categories"
           :key="category.categoryId"
           :index="String(category.categoryId)"
           @mouseenter="handleMouseEnter(category)"
@@ -44,18 +47,18 @@
           {{ category.name }}
         </el-menu-item>
       </el-menu>
-      
+
       <!-- 子分类菜单 -->
-      <div 
-        class="sub-menu" 
+      <div
+        class="sub-menu"
         v-show="activeCategory && activeCategory.children?.length"
         @mouseenter="clearHideTimer"
         @mouseleave="handleSubmenuLeave"
       >
         <h3>{{ activeCategory?.name }}</h3>
         <div class="sub-categories">
-          <span 
-            v-for="subCategory in activeCategory?.children" 
+          <span
+            v-for="subCategory in activeCategory?.children"
             :key="subCategory.categoryId"
             class="sub-category"
             @click="handleSubCategoryClick(subCategory)"
@@ -69,18 +72,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useCategories } from '../composables/useCategories'
-import { useBreakpoints } from '@vueuse/core'
+import { ref, computed, onMounted } from "vue";
+import { useCategories } from "../composables/useCategories";
+import { useBreakpoints } from "@vueuse/core";
 
 const props = defineProps({
   contentHeight: {
     type: [String, Number],
-    default: '600'
-  }
-})
+    default: "600",
+  },
+});
 
-const emit = defineEmits(['category-change'])
+const emit = defineEmits(["category-change"]);
 
 const {
   categories,
@@ -89,63 +92,63 @@ const {
   activeCollapse,
   fetchCategories,
   handleCategoryClick,
-  handleSubCategoryClick
-} = useCategories()
+  handleSubCategoryClick,
+} = useCategories();
 
 const breakpoints = useBreakpoints({
-  mobile: 768
-})
+  mobile: 768,
+});
 
-const isMobileView = computed(() => breakpoints.smaller('mobile'))
-const activeIndex = ref('0')
-let hideTimer = null
+const isMobileView = computed(() => breakpoints.smaller("mobile"));
+const activeIndex = ref("0");
+let hideTimer = null;
 
 // 在组件挂载时获取分类数据
 onMounted(async () => {
-  await fetchCategories()
-})
+  await fetchCategories();
+});
 
 // 鼠标进入分类
 const handleMouseEnter = (category) => {
   if (hideTimer) {
-    clearTimeout(hideTimer)
+    clearTimeout(hideTimer);
   }
-  activeCategory.value = category
-}
+  activeCategory.value = category;
+};
 
 // 清除隐藏定时器
 const clearHideTimer = () => {
   if (hideTimer) {
-    clearTimeout(hideTimer)
-    hideTimer = null
+    clearTimeout(hideTimer);
+    hideTimer = null;
   }
-}
+};
 
 // 处理菜单项离开
 const handleMenuItemLeave = () => {
   hideTimer = setTimeout(() => {
-    activeCategory.value = null
-  }, 200)
-}
+    activeCategory.value = null;
+  }, 200);
+};
 
 // 处理子菜单离开
 const handleSubmenuLeave = () => {
   hideTimer = setTimeout(() => {
-    activeCategory.value = null
-  }, 200)
-}
+    activeCategory.value = null;
+  }, 200);
+};
 
 // 处理分类点击，向父组件发送事件
 const handleCategorySelect = (category) => {
-  handleCategoryClick(category)
-  emit('category-change', category)
-}
+  handleCategoryClick(category);
+  emit("category-change", category);
+};
 
 // 处理子分类点击，向父组件发送事件
 const handleSubCategorySelect = (subCategory) => {
-  handleSubCategoryClick(subCategory)
-  emit('category-change', subCategory)
-}
+  handleSubCategoryClick(subCategory);
+  emit("category-change", subCategory);
+};
 </script>
 
 <style scoped>
@@ -354,4 +357,4 @@ h2 {
   color: var(--cosmic-blue) !important;
   background: rgba(255, 97, 210, 0.1) !important;
 }
-</style> 
+</style>

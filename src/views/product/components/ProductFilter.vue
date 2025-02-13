@@ -4,16 +4,16 @@
       <div class="filter-section">
         <h3>价格区间</h3>
         <div class="price-range">
-          <el-input-number 
-            v-model="priceRange.min" 
-            :min="0" 
+          <el-input-number
+            v-model="priceRange.min"
+            :min="0"
             :step="10"
             placeholder="最低价"
           />
           <span class="separator">-</span>
-          <el-input-number 
-            v-model="priceRange.max" 
-            :min="0" 
+          <el-input-number
+            v-model="priceRange.max"
+            :min="0"
             :step="10"
             placeholder="最高价"
           />
@@ -24,16 +24,12 @@
         <h3>商品评分</h3>
         <div class="rating-filter">
           <el-checkbox-group v-model="selectedRatings">
-            <el-checkbox 
-              v-for="rating in ratingOptions" 
-              :key="rating.value" 
+            <el-checkbox
+              v-for="rating in ratingOptions"
+              :key="rating.value"
               :label="rating.value"
             >
-              <el-rate 
-                :model-value="rating.value" 
-                disabled 
-                show-score
-              />
+              <el-rate :model-value="rating.value" disabled show-score />
             </el-checkbox>
           </el-checkbox-group>
         </div>
@@ -63,59 +59,68 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch } from "vue";
+import { useProductFilter } from "../composables/useProductFilter";
 
-const emit = defineEmits(['filter-change'])
+const emit = defineEmits(["filter-change"]);
+
+const {
+  filterParams,
+  priceRanges,
+  ratingOptions: defaultRatingOptions,
+  tagOptions,
+  updateFilter,
+  resetFilter,
+} = useProductFilter();
 
 // 价格区间
-const priceRange = ref({
-  min: null,
-  max: null
-})
+const priceRange = ref(filterParams.price);
 
 // 评分选项
-const ratingOptions = [
-  { value: 5, label: '五星' },
-  { value: 4, label: '四星及以上' },
-  { value: 3, label: '三星及以上' }
-]
-const selectedRatings = ref([])
+const ratingOptions = defaultRatingOptions;
+const selectedRatings = ref([]);
 
 // 标签
-const tags = ['新品', '热销', '促销', '限时', '精选']
-const selectedTags = ref([])
+const tags = tagOptions;
+const selectedTags = ref([]);
 
 // 切换标签选择
 const toggleTag = (tag) => {
-  const index = selectedTags.value.indexOf(tag)
+  const index = selectedTags.value.indexOf(tag);
   if (index > -1) {
-    selectedTags.value.splice(index, 1)
+    selectedTags.value.splice(index, 1);
   } else {
-    selectedTags.value.push(tag)
+    selectedTags.value.push(tag);
   }
-}
+  updateFilter("tags", selectedTags.value);
+};
 
 // 应用筛选
 const applyFilters = () => {
-  emit('filter-change', {
-    price: priceRange.value,
-    ratings: selectedRatings.value,
-    tags: selectedTags.value
-  })
-}
+  updateFilter("price", [priceRange.value.min, priceRange.value.max]);
+  updateFilter("ratings", selectedRatings.value);
+  emit("filter-change", {
+    ...filterParams,
+  });
+};
 
 // 重置筛选
 const resetFilters = () => {
-  priceRange.value = { min: null, max: null }
-  selectedRatings.value = []
-  selectedTags.value = []
-  applyFilters()
-}
+  resetFilter();
+  priceRange.value = filterParams.price;
+  selectedRatings.value = [];
+  selectedTags.value = [];
+  applyFilters();
+};
 
 // 监听筛选条件变化
-watch([priceRange, selectedRatings, selectedTags], () => {
-  applyFilters()
-}, { deep: true })
+watch(
+  [priceRange, selectedRatings, selectedTags],
+  () => {
+    applyFilters();
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>
@@ -129,7 +134,7 @@ watch([priceRange, selectedRatings, selectedTags], () => {
 }
 
 .filter-section h3::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
@@ -230,4 +235,4 @@ watch([priceRange, selectedRatings, selectedTags], () => {
     box-shadow: 0 0 5px rgba(250, 159, 252, 0.2);
   }
 }
-</style> 
+</style>

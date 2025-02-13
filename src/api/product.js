@@ -22,28 +22,26 @@ export const getProducts = async (params = {}) => {
 }
 
 // 获取商品详情
-export const getProductById = async (id) => {
+export const getProductDetail = async (id) => {
   if (!id) {
     throw new Error('商品ID不能为空')
   }
+  console.log('发送商品详情请求，ID:', id); // 添加日志
   return request({
-    url: `/products/${id}`,
+    url: '/products/' + id,
     method: 'get'
   })
 }
 
 // 添加到购物车
-export const addToCart = async (productId, quantity = 1) => {
-  if (!productId) {
+export const addToCart = async (cartData) => {
+  if (!cartData.productId) {
     throw new Error('商品ID不能为空')
   }
   return request({
     url: '/cart/add',
     method: 'post',
-    data: { 
-      productId, 
-      quantity: Math.max(1, Math.floor(quantity)) // 确保数量是正整数
-    }
+    data: cartData
   })
 }
 
@@ -107,7 +105,7 @@ export const batchGetProducts = async (productIds) => {
   
   try {
     const results = await Promise.allSettled(
-      productIds.map(id => getProductById(id))
+      productIds.map(id => getProductDetail(id))
     )
     
     return results

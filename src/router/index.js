@@ -3,19 +3,31 @@ import { ElMessage } from 'element-plus'
 import Home from '@/views/home/index.vue'
 import NotFound from '@/views/NotFound.vue'
 import Admin from '@/views/admin/index.vue'
+import Cart from '@/views/cart/index.vue'
 import { getCookie, removeCookie } from '@/utils/cookie'
 import { useUserStore } from '@/stores/user'
+import ProductDetail from '@/views/product/components/ProductDetail.vue'
+import Checkout from '@/views/checkout/index.vue'
+import Payment from '@/views/payment/index.vue'
+import OrderList from '@/views/profile/orders/index.vue'
 
 const routes = [
   {
     path: '/',
-    redirect: '/home'
+    redirect: '/home',
+    meta: { requiresAuth: false }
   },
   {
     path: '/home',
     name: 'Home',
     component: Home,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/cart',
+    name: 'Cart',
+    component: Cart,
+    meta: { requiresAuth: true }
   },
   {
     path: '/login',
@@ -36,6 +48,12 @@ const routes = [
     meta: { 
       requiresAuth: true
     }
+  },
+  {
+    path: '/profile/orders',
+    name: 'UserOrders',
+    component: OrderList,
+    meta: { requiresAuth: true }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -106,6 +124,33 @@ const routes = [
         next('/login')
       }
     }
+  },
+  {
+    path: '/product/:id',
+    name: 'ProductDetail',
+    component: ProductDetail,
+    props: true,
+    beforeEnter: (to, from, next) => {
+      console.log('路由参数:', to.params);
+      if (!to.params.id) {
+        next('/home');
+      } else {
+        next();
+      }
+    }
+  },
+  {
+    path: '/checkout',
+    name: 'Checkout',
+    component: Checkout,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/payment/:orderId/:totalAmount',
+    name: 'Payment',
+    component: Payment,
+    props: true,
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -118,26 +163,36 @@ router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
   // 初始化用户状态
-  userStore.initializeFromStorage()
+  try {
+    await userStore.initializeFromStorage()
+   
+    // 如果是访问根路径，重定向到首页
+    if (to.path === '/') {
+      next('/home')
+      return
+    }
 
-  // 需要登录的路由
-  if (to.meta.requiresAuth) {
-    if (!userStore.isLoggedIn) {
-      // 尝试验证token
-      try {
-        await userStore.validateToken()
+    // 需要登录的路由
+    if (to.meta.requiresAuth) {
+      if (!userStore.isLoggedIn) {
+        try {
+          await userStore.validateToken()
+          next()
+        } catch (error) {
+          next({
+            path: '/login',
+            query: { redirect: to.fullPath }
+          })
+        }
+      } else {
         next()
-      } catch (error) {
-        next({
-          path: '/login',
-          query: { redirect: to.fullPath }
-        })
       }
     } else {
       next()
     }
-  } else {
-    next()
+  } catch (error) {
+    console.error('路由守卫错误:', error)
+    next('/home')  // 发生错误时默认跳转到首页
   }
 })
 
