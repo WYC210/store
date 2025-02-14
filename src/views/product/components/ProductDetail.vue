@@ -1,16 +1,21 @@
 <template>
-  <div class="product-detail dream-card" v-loading="loading">
+  <div class="product-detail" v-if="product">
     <!-- 商品图片展示区 -->
     <div class="product-gallery">
       <el-image
-        :src="product.imageUrl"
-        fit="cover"
+        v-if="product.images && product.images.length"
+        :src="product.images[0]"
+        fit="contain"
         class="product-main-image"
-        :preview-src-list="[product.imageUrl]"
+        :preview-src-list="product.images"
+        @error="handleImageError"
       >
         <template #error>
-          <div class="image-error">
-            <el-icon><Picture /></el-icon>
+          <div class="image-placeholder">
+            <el-image
+              :src="errorImage"
+              fit="contain"
+            />
           </div>
         </template>
       </el-image>
@@ -25,8 +30,12 @@
 
       <!-- 商品评分 -->
       <div class="rating-box">
-        <el-rate v-model="product.rating" disabled show-score />
-        <span class="review-count">({{ product.reviewCount }}条评价)</span>
+        <el-rate
+          :model-value="productRating"
+          disabled
+          show-score
+        />
+        <span class="review-count">({{ product.reviewCount || 0 }}条评价)</span>
       </div>
 
       <!-- 商品标签 -->
@@ -91,6 +100,9 @@
       </div>
     </div>
   </div>
+  <div v-else class="loading-placeholder">
+    <el-skeleton :rows="3" animated />
+  </div>
 </template>
 
 <script setup>
@@ -114,40 +126,29 @@ const categoryStore = useCategoryStore();
 console.log("获取到的商品ID:", productId);
 
 // 商品数据
-const product = ref({
-  productId: null,
-  name: "",
-  price: 0,
-  rating: 0,
-  reviewCount: 0,
-  stock: 0,
-  imageUrl: "",
-  description: "",
-  brand: "",
-  categoryId: null,
-  tags: "",
-  isActive: 1,
-  createdUser: "",
-  createdTime: "",
-  modifiedUser: "",
-  modifiedTime: "",
+const product = ref(null);
+const errorImage = require('@/assets/cs.png'); // 引入备用图片
+
+// 使用计算属性来处理评分
+const productRating = computed(() => {
+  return product.value?.rating || 0;
 });
 
 // 计算商品标签
 const productTags = computed(() => {
-  return product.value.tags ? product.value.tags.split(",") : [];
+  return product.value?.tags ? product.value.tags.split(",") : [];
 });
 
 // 获取分类名称
 const categoryName = computed(() => {
-  if (!product.value.categoryId) return "";
+  if (!product.value?.categoryId) return "";
   const category = categoryStore.getCategoryById(product.value.categoryId);
   return category?.name || "";
 });
 
 // 计算最大可购买数量
 const maxQuantity = computed(() => {
-  return Math.max(product.value.stock || 0, 1);
+  return Math.max(product.value?.stock || 0, 1);
 });
 
 // 选中的数量
@@ -155,7 +156,7 @@ const quantity = ref(1);
 
 // 监听库存变化，调整购买数量
 watch(
-  () => product.value.stock,
+  () => product.value?.stock,
   (newStock) => {
     if (newStock < quantity.value) {
       quantity.value = Math.max(Math.min(newStock, 1), 1);
@@ -178,44 +179,13 @@ const fetchProductDetail = async () => {
     console.log("商品详情响应:", response);
 
     if (response) {
-      // 使用解构赋值确保所有字段都被正确处理
-      const {
-        productId,
-        name,
-        description,
-        price,
-        stock,
-        categoryId,
-        brand,
-        tags,
-        imageUrl,
-        rating,
-        reviewCount,
-        isActive,
-        createdUser,
-        createdTime,
-        modifiedUser,
-        modifiedTime,
-      } = response;
-
-      // 更新商品数据
+      // 合并 product 和 images 数据
       product.value = {
-        productId,
-        name,
-        description,
-        price,
-        stock,
-        categoryId,
-        brand,
-        tags,
-        imageUrl,
-        rating,
-        reviewCount,
-        isActive,
-        createdUser,
-        createdTime,
-        modifiedUser,
-        modifiedTime,
+        ...response.data.product,
+        images: response.data.images.map(image => {
+          // 修复重复的基础URL问题
+          return image.replace(/^http:\/\/localhost:8088\/products\/images\/http:\/\/localhost:8088\/products\/images\//, 'http://localhost:8088/products/images/');
+        })
       };
 
       console.log("商品数据已更新:", product.value);
@@ -243,7 +213,7 @@ const handleAddToCart = async () => {
       return;
     }
 
-    if (!product.value.stock) {
+    if (!product.value?.stock) {
       ElMessage.warning("商品暂时无货");
       return;
     }
@@ -275,7 +245,7 @@ const handleBuyNow = async () => {
       items: [{
         productId: productId,
         quantity: quantity.value,
-        price: product.value.price
+        price: product.value?.price
       }]
     }
     
@@ -287,6 +257,13 @@ const handleBuyNow = async () => {
   } catch (error) {
     console.error('创建订单失败:', error)
     ElMessage.error('创建订单失败，请重试')
+  }
+};
+
+// 处理图片加载错误
+const handleImageError = () => {
+  if (product.value && product.value.images) {
+    product.value.images = [errorImage];
   }
 };
 
@@ -503,5 +480,20 @@ onMounted(() => {
   background: rgba(255, 97, 210, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--starlight);
+}
+
+.loading-placeholder {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
 }
 </style>

@@ -32,7 +32,7 @@ export function useProducts() {
           name: product.name,
           price: product.price,
           description: product.description,
-          imageUrl: product.imageUrl,
+          imageUrl: `http://localhost:8088/products${product.imageUrl}`,
           stock: product.stock,
           rating: product.rating || 0,
           reviewCount: product.reviewCount || 0,

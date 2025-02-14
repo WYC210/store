@@ -23,11 +23,14 @@
           @mouseleave="handleProductLeave"
           @click="goToDetail(product.productId)"
         >
-          <el-image :src="product.imageUrl" class="product-image" fit="cover">
+          <el-image
+            :src="product.imageUrl"
+            class="product-image"
+            fit="cover"
+            @error="handleImageError(product)"
+          >
             <template #error>
-              <div class="image-placeholder">
-                <el-icon><Picture /></el-icon>
-              </div>
+              <el-image :src="errorImage" fit="cover" />
             </template>
           </el-image>
           <div class="product-info">
@@ -93,6 +96,7 @@ const { products, loading, pagination, productParams, fetchProducts } =
   useProducts();
 
 const router = useRouter();
+const errorImage = require('@/assets/cs.png'); // 引入备用图片
 
 // 悬浮卡片状态
 const hoveredProduct = ref(null);
@@ -226,6 +230,11 @@ const goToDetail = (productId) => {
 watch(products, (newProducts) => {
   console.log('商品列表数据:', newProducts)
 }, { deep: true })
+
+// 处理图片加载错误
+const handleImageError = (product) => {
+  product.imageUrl = errorImage; // 替换为备用图片
+};
 </script>
 
 <style scoped>
