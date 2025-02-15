@@ -1,5 +1,5 @@
 <template>
-  <div class="cart-container dream-card">
+  <div class="cart-container">
     <div class="page-header">
       <router-link to="/home" class="back-home">
         <el-button type="primary" class="home-btn">
@@ -20,15 +20,14 @@
     <!-- 购物车列表 -->
     <div class="cart-list" v-loading="loading">
       <template v-if="cartItems.length">
-        <div class="cart-item dream-card" v-for="item in cartItems" :key="item.id">
+        <div class="cart-item" v-for="item in cartItems" :key="item.cartItemId">
           <el-checkbox v-model="item.selected" @change="updateSelection"/>
           
           <div class="item-image">
             <el-image 
-              v-if="item.product"
-              :src="item.product.imageUrl" 
+              :src="getImageUrl(item.imageUrl)"
               fit="cover"
-              :preview-src-list="[item.product.imageUrl]"
+              class="product-image"
             >
               <template #error>
                 <div class="image-placeholder">
@@ -36,14 +35,12 @@
                 </div>
               </template>
             </el-image>
-            <div v-else class="image-placeholder">
-              <el-icon><Picture /></el-icon>
-            </div>
           </div>
 
           <div class="item-info">
-            <h3 class="item-name">{{ item.product ? item.product.name : '未知商品' }}</h3>
-            <p class="item-price">¥{{ item.product ? item.product.price : '0.00' }}</p>
+            <h3 class="item-name">{{ item.productName }}</h3>
+            <p class="item-price">¥{{ item.price.toFixed(2) }}</p>
+            <p>数量: {{ item.quantity }}</p>
           </div>
 
           <div class="item-quantity">
@@ -56,14 +53,14 @@
           </div>
 
           <div class="item-total">
-            <p class="total-price">¥{{ (item.product ? item.product.price : 0) * item.quantity }}</p>
+            <p class="total-price">¥{{ (item.price * item.quantity).toFixed(2) }}</p>
           </div>
 
           <div class="item-actions">
             <el-button 
               type="danger" 
               circle
-              @click="removeItem(item.id)"
+              @click="removeItem(item.cartItemId)"
             >
               <el-icon><Delete /></el-icon>
             </el-button>
@@ -121,21 +118,33 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
-import { getProductDetail } from '@/api/product'  // 导入获取产品详情的 API
-import { useCheckoutStore } from '@/stores/checkout'  // 添加导入
+import { getProductDetail } from '@/api/product'
+import orderApi from '@/api/order'
+import cartApi from '@/api/cart'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const userStore = useUserStore()
 const loading = ref(false)
 
-// 获取购物车数据
+const cartItems = ref([])
+
 const fetchCartData = async () => {
   loading.value = true
   try {
-    await cartStore.fetchCartItems()
-    await fetchProductDetails()  // 获取产品详情
+    console.log('请求购物车商品列表...')
+    const response = await cartApi.getCartItems()
+    console.log('购物车商品列表:', response)
+
+    // 直接使用返回的数据
+    if (response.state === 200 && Array.isArray(response.data)) {
+      cartItems.value = response.data // 直接赋值
+    } else {
+      console.error('购物车数据格式错误:', response)
+      ElMessage.error('获取购物车数据失败')
+    }
   } catch (error) {
+    console.error('获取购物车数据失败:', error)
     ElMessage.error('获取购物车数据失败')
   } finally {
     loading.value = false
@@ -144,24 +153,29 @@ const fetchCartData = async () => {
 
 // 获取产品详情
 const fetchProductDetails = async () => {
-  for (const item of cartStore.cartItems) {
-    try {
-      const productResponse = await getProductDetail(item.productId)
-      item.product = productResponse  // 将完整的产品信息添加到购物车项中
-    } catch (error) {
-      console.error('获取产品详情失败:', error)
-      ElMessage.error('获取产品详情失败')
+  try {
+    for (const item of cartItems.value) {
+      if (item.productId) {  // 确保有 productId
+        const productResponse = await getProductDetail(item.productId)
+        if (productResponse.state === 200) {
+          item.product = productResponse.data
+        } else {
+          console.error('获取产品详情失败:', productResponse)
+        }
+      }
     }
+  } catch (error) {
+    console.error('获取产品详情失败:', error)
+    ElMessage.error('获取产品详情失败')
   }
 }
 
 // 计算属性
-const cartItems = computed(() => cartStore.cartItems)
 const selectedCount = computed(() => cartItems.value.filter(item => item.selected).length)
 const totalPrice = computed(() => {
   return cartItems.value.reduce((total, item) => {
-    if (item.selected && item.product) {
-      return total + (item.product.price * item.quantity)
+    if (item.selected) {
+      return total + (item.price * item.quantity)
     }
     return total
   }, 0)
@@ -176,7 +190,7 @@ const isAllSelected = computed({
 const updateQuantity = async (item) => {
   try {
     await cartStore.updateCartItem({
-      id: item.id,
+      id: item.cartItemId,
       quantity: item.quantity
     })
   } catch (error) {
@@ -208,42 +222,49 @@ const updateSelection = () => {
   cartStore.updateSelection(cartItems.value)
 }
 
-const handleCheckout = () => {
+const handleCheckout = async () => {
   const selectedItems = cartItems.value.filter(item => item.selected)
-  console.log('1. 选中的商品:', selectedItems)
-  
   if (!selectedItems.length) {
-    ElMessage.warning('请选择要结算的商品')
+    ElMessage.warning('请至少选择一件商品进行结算')
     return
   }
-  
-  // 构建结算商品信息
-  const itemsToCheckout = selectedItems.map(item => {
-    console.log('2. 处理商品:', item)
-    return {
-      cartItemId: item.cartItemId,
-      productId: item.productId,
-      productName: item.productName,
-      price: item.price,
-      quantity: item.quantity
+
+  try {
+    const orderData = {
+      items: selectedItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price
+      }))
     }
-  })
-
-  console.log('3. 准备发送到结算页面的商品信息:', itemsToCheckout)
-
-  if (!itemsToCheckout.length) {
-    ElMessage.warning('选择的商品中有无效的商品ID')
-    return
+    
+    // 添加调试输出
+    console.log('发送结算请求，请求数据:', orderData)
+    
+    // 使用 orderApi.createOrder 替代 createOrder
+    const response = await orderApi.createOrder(orderData)
+    console.log('结算响应:', response)
+    
+    if (response.state === 200) {
+      const { orderId, totalAmount } = response.data
+      console.log('创建订单成功，订单ID:', orderId, '总金额:', totalAmount)
+      router.push(`/payment/${orderId}/${totalAmount}`)
+    }
+  } catch (error) {
+    console.error('结算失败:', error)
+    ElMessage.error('结算失败，请重试')
   }
+}
 
-  // 使用 store 保存结算信息
-  const checkoutStore = useCheckoutStore()
-  checkoutStore.setCheckoutItems(itemsToCheckout)
-
-  // 跳转到结算页面
-  router.push({
-    name: 'Checkout'
-  })
+// 添加处理图片 URL 的方法
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return ''
+  // 如果已经是完整的 URL，则直接返回
+  if (imageUrl.startsWith('http')) {
+    return imageUrl
+  }
+  // 否则，添加后端基础 URL
+  return `http://localhost:8088/${imageUrl}`
 }
 
 onMounted(() => {
@@ -265,7 +286,10 @@ onMounted(() => {
   padding: 20px;
   background: rgba(6, 5, 36, 0.95);
   border-radius: 15px;
-  box-shadow: 0 0 20px rgba(250, 159, 252, 0.2);
+  border: 1px solid rgba(250, 159, 252, 0.3);
+  transform: none !important;
+  transition: none !important;
+  box-shadow: none !important;
 }
 
 .cart-header {
@@ -307,12 +331,10 @@ onMounted(() => {
   margin-bottom: 15px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
-  transition: all 0.3s;
-}
-
-.cart-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(250, 159, 252, 0.3);
+  border: 1px solid rgba(250, 159, 252, 0.3);
+  transform: none !important;
+  transition: none !important;
+  box-shadow: none !important;
 }
 
 .item-image {

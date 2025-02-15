@@ -15,6 +15,12 @@
         <h2>订单信息</h2>
         <p>订单号：{{ orderId }}</p>
         <p>支付金额：¥{{ totalAmount }}</p>
+        <h3>商品详情:</h3>
+        <ul>
+          <li v-for="item in productDetails" :key="item.cartItemId">
+            {{ item.productName }} - 数量: {{ item.quantity }} - 价格: ¥{{ item.price }}
+          </li>
+        </ul>
       </div>
 
       <div class="payment-actions">
@@ -36,8 +42,9 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { payOrder } from '@/api/order'
+import orderApi from '@/api/order'
 import { generatePaymentId } from '@/utils/payment'
+import { useCheckoutStore } from '@/stores/checkout'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,6 +54,8 @@ const paymentLoading = ref(false)
 // 从路由参数中获取订单信息
 const orderId = ref(route.params.orderId)
 const totalAmount = ref(route.params.totalAmount)
+const checkoutStore = useCheckoutStore()
+const productDetails = ref(checkoutStore.checkoutItems)
 
 // 添加调试信息
 console.log('支付页面路由参数:', {
@@ -65,15 +74,17 @@ onMounted(() => {
 const handlePayment = async () => {
   paymentLoading.value = true
   try {
-    // 生成支付流水号
-    const paymentId = generatePaymentId()
-    
-    // 调用支付接口
-    await payOrder(orderId.value, { paymentId })
-    
-    ElMessage.success('支付成功！')
-    // 修改: 支付成功后跳转到个人订单列表页面
-    router.push('/profile/orders')  // 假设个人订单列表在这个路径
+    const paymentData = {
+      orderId: orderId.value,
+      amount: totalAmount.value
+    }
+    const response = await orderApi.payOrder(orderId.value, paymentData)
+    console.log('支付响应:', response)
+    if (response.state === 200) {
+      ElMessage.success('支付成功！')
+      // 支付成功后跳转到订单列表页面
+      router.push('/profile/orders')
+    }
   } catch (error) {
     console.error('支付失败:', error)
     ElMessage.error('支付失败，请重试')
@@ -84,7 +95,6 @@ const handlePayment = async () => {
 
 const cancelPayment = () => {
   ElMessage.warning('取消支付')
-  // 修改: 取消支付后跳转回个人订单列表
   router.push('/profile/orders')
 }
 </script>

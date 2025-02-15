@@ -1,68 +1,64 @@
 <template>
-  <header
-    class="navbar"
-    :class="{ 'navbar-fixed': isNavFixed, 'light-theme': !isDarkTheme }"
-  >
-    <router-link to="/home" class="logo-container">
-      <img src="@/assets/logo_w.png" alt="Logo" class="logo" />
-      <CyberText />
-    </router-link>
+  <header class="header" :class="{ 'header-fixed': isScrolled }">
+    <div class="header-content">
+      <!-- Logo -->
+      <router-link to="/home" class="logo">
+        <img src="@/assets/logo_w.png" alt="Logo" />
+      </router-link>
 
-    <SearchBar @search="handleSearch" />
+      <!-- 导航菜单 -->
+      <nav class="nav-menu">
+        <router-link to="/home" class="nav-item">首页</router-link>
+        <router-link to="/products" class="nav-item">商品</router-link>
+        <router-link to="/cart" class="nav-item">
+          <el-badge
+            :value="cartStore.totalCount"
+            :hidden="!cartStore.totalCount"
+          >
+            <el-icon><ShoppingCart /></el-icon>
+            购物车
+          </el-badge>
+        </router-link>
+      </nav>
 
-    <div class="theme-switch">
-      <el-button
-        :icon="isDarkTheme ? 'Sunny' : 'Moon'"
-        circle
-        @click="toggleTheme"
-        class="theme-button"
-      />
+      <!-- 用户区域 -->
+      <div class="user-area">
+        <template v-if="userStore.isLoggedIn">
+          <UserDropdown />
+        </template>
+        <template v-else>
+          <el-button
+            type="primary"
+            class="login-btn hologram-btn"
+            @click="handleLogin"
+          >
+            登录
+          </el-button>
+        </template>
+      </div>
     </div>
-
-    <nav class="nav-links">
-      <router-link to="/" class="nav-link hologram-btn glow-effect">
-        <el-icon><HomeFilled /></el-icon>
-        首页
-      </router-link>
-      <router-link to="/cart" class="nav-link hologram-btn glow-effect">
-        <el-icon><ShoppingCart /></el-icon>
-        购物车
-      </router-link>
-      <router-link to="/profile" class="nav-link hologram-btn glow-effect">
-        <el-icon><User /></el-icon>
-        个人中心
-      </router-link>
-    </nav>
   </header>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { Sunny, Moon } from "@element-plus/icons-vue";
-import { useTheme } from "../composables/useTheme";
-import CyberText from "@/components/CyberText.vue";
-import SearchBar from "./SearchBar.vue";
-import { debounce as _debounce } from "lodash-es";
+import { useUserStore } from "@/stores/user";
+import { useCartStore } from "@/stores/cart";
+import { ShoppingCart } from "@element-plus/icons-vue";
+import UserDropdown from "@/components/UserDropdown.vue";
 
 const router = useRouter();
-const { isDarkTheme, toggleTheme } = useTheme();
-const isNavFixed = ref(false);
+const userStore = useUserStore();
+const cartStore = useCartStore();
+const isScrolled = ref(false);
 
-// 滚动处理
-const handleScroll = _debounce(() => {
-  isNavFixed.value = window.scrollY > 0;
-}, 16);
+const handleScroll = () => {
+  isScrolled.value = window.scrollY > 0;
+};
 
-// 导航方法
-const goToHome = () => router.push("/home");
-const goToCart = () => router.push("/cart");
-const goToProfile = () => router.push("/profile");
-
-const emit = defineEmits(["search"]);
-
-const handleSearch = (keyword) => {
-  emit("search", keyword);
+const handleLogin = () => {
+  router.push("/login");
 };
 
 onMounted(() => {
@@ -75,134 +71,116 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: rgba(6, 5, 36, 0.95);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(250, 159, 252, 0.3);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-  width: 100%;
-  z-index: 1000;
+.header {
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  height: 80px;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  background: transparent;
 }
 
-.navbar-fixed {
-  transform: translateY(0);
+.header-fixed {
+  background: rgba(6, 5, 36, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(250, 159, 252, 0.2);
 }
 
-.logo-container {
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 100%;
   display: flex;
   align-items: center;
-  text-decoration: none;
+  justify-content: space-between;
 }
 
 .logo {
-  height: 40px;
-  margin-right: 10px;
-}
-
-.nav-links {
+  height: 60px;
   display: flex;
-  gap: 15px;
+  align-items: center;
 }
 
-.theme-switch {
-  margin-left: auto;
+.logo img {
+  height: 100%;
+  object-fit: contain;
 }
 
-.theme-button {
-  background: transparent;
-  border: 1px solid rgba(250, 159, 252, 0.3);
-  color: #fff;
-  transition: all 0.3s;
+.nav-menu {
+  display: flex;
+  gap: 30px;
+  align-items: center;
 }
 
-.theme-button:hover {
-  background: rgba(250, 159, 252, 0.1);
-  transform: rotate(180deg);
-}
-
-.light-theme .theme-button {
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #333;
-}
-
-.light-theme .theme-button:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.nav-link {
-  padding: 8px 16px;
-  border-radius: 20px;
+.nav-item {
+  color: var(--starlight);
   text-decoration: none;
+  font-size: 16px;
   display: flex;
   align-items: center;
   gap: 5px;
-  font-weight: 500;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    45deg,
-    rgba(255, 0, 255, 0.8),
-    rgba(0, 255, 255, 0.8)
-  );
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
-    inset 0 0 15px rgba(255, 255, 255, 0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
   transition: all 0.3s ease;
-  animation: buttonPulse 2s infinite;
 }
 
-.nav-link:hover {
-  filter: hue-rotate(90deg);
+.nav-item:hover {
+  color: var(--cosmic-blue);
+  background: rgba(250, 159, 252, 0.1);
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(0, 255, 255, 0.7),
-    inset 0 0 20px rgba(255, 255, 255, 0.5);
 }
 
-@keyframes buttonPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.5),
-      inset 0 0 15px rgba(255, 255, 255, 0.3);
+.nav-item.router-link-active {
+  color: var(--cosmic-blue);
+  background: rgba(250, 159, 252, 0.1);
+}
+
+.user-area {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.login-btn {
+  min-width: 100px;
+  background: linear-gradient(45deg, var(--aurora-pink), var(--cosmic-blue));
+  border: none;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(250, 159, 252, 0.3);
+}
+
+/* 购物车图标样式 */
+.el-badge :deep(.el-badge__content) {
+  background-color: var(--aurora-pink);
+}
+
+/* 确保导航栏在滚动时平滑过渡 */
+.header-fixed .nav-item {
+  color: var(--starlight);
+}
+
+.header-fixed .nav-item:hover {
+  color: var(--cosmic-blue);
+}
+
+/* 适配移动端 */
+@media screen and (max-width: 768px) {
+  .nav-menu {
+    display: none;
   }
-  50% {
-    box-shadow: 0 0 30px rgba(0, 255, 255, 0.7),
-      inset 0 0 25px rgba(255, 255, 255, 0.5);
+
+  .header-content {
+    padding: 0 15px;
   }
-}
 
-.nav-link .el-icon {
-  font-size: 1.2em;
-  color: white;
-}
-
-/* 激活状态特效 */
-.nav-link.router-link-active {
-  background: linear-gradient(
-    45deg,
-    rgba(255, 0, 255, 0.9),
-    rgba(0, 255, 255, 0.9)
-  );
-  box-shadow: 0 0 40px rgba(0, 255, 255, 0.8),
-    inset 0 0 30px rgba(255, 255, 255, 0.6);
-  animation: activeButtonPulse 2s infinite;
-}
-
-@keyframes activeButtonPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 40px rgba(0, 255, 255, 0.8),
-      inset 0 0 30px rgba(255, 255, 255, 0.6);
-  }
-  50% {
-    box-shadow: 0 0 60px rgba(0, 255, 255, 1),
-      inset 0 0 45px rgba(255, 255, 255, 0.8);
+  .logo {
+    height: 50px;
   }
 }
 </style>

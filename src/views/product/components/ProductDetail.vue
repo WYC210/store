@@ -12,10 +12,7 @@
       >
         <template #error>
           <div class="image-placeholder">
-            <el-image
-              :src="errorImage"
-              fit="contain"
-            />
+            <el-image :src="errorImage" fit="contain" />
           </div>
         </template>
       </el-image>
@@ -30,11 +27,7 @@
 
       <!-- 商品评分 -->
       <div class="rating-box">
-        <el-rate
-          :model-value="productRating"
-          disabled
-          show-score
-        />
+        <el-rate :model-value="product.rating || 0" disabled show-score />
         <span class="review-count">({{ product.reviewCount || 0 }}条评价)</span>
       </div>
 
@@ -111,7 +104,7 @@ import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ShoppingCart, Picture } from "@element-plus/icons-vue";
 import { getProductDetail, addToCart } from "@/api/product";
-import { createOrder } from "@/api/order";
+import orderApi from "@/api/order"; // 确保导入 orderApi
 import { useUserStore } from "@/stores/user";
 import { useOrderStore } from "@/stores/order";
 import { useCategoryStore } from "@/stores/category";
@@ -127,7 +120,7 @@ console.log("获取到的商品ID:", productId);
 
 // 商品数据
 const product = ref(null);
-const errorImage = require('@/assets/cs.png'); // 引入备用图片
+const errorImage = require("@/assets/cs.png"); // 引入备用图片
 
 // 使用计算属性来处理评分
 const productRating = computed(() => {
@@ -182,10 +175,13 @@ const fetchProductDetail = async () => {
       // 合并 product 和 images 数据
       product.value = {
         ...response.data.product,
-        images: response.data.images.map(image => {
+        images: response.data.images.map((image) => {
           // 修复重复的基础URL问题
-          return image.replace(/^http:\/\/localhost:8088\/products\/images\/http:\/\/localhost:8088\/products\/images\//, 'http://localhost:8088/products/images/');
-        })
+          return image.replace(
+            /^http:\/\/localhost:8088\/products\/images\/http:\/\/localhost:8088\/products\/images\//,
+            "http://localhost:8088/products/images/"
+          );
+        }),
       };
 
       console.log("商品数据已更新:", product.value);
@@ -234,29 +230,31 @@ const handleAddToCart = async () => {
 // 立即购买
 const handleBuyNow = async () => {
   if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
+    ElMessage.warning("请先登录");
+    router.push("/login");
+    return;
   }
 
   try {
-    // 1. 创建订单
     const orderData = {
-      items: [{
-        productId: productId,
-        quantity: quantity.value,
-        price: product.value?.price
-      }]
-    }
-    
-    const orderResponse = await createOrder(orderData)
-    const { orderId, totalAmount } = orderResponse.data
+      productId: product.value.productId,
+      quantity: 1, // 默认购买数量为1
+    };
 
-    // 2. 跳转到支付页面
-    router.push(`/payment/${orderId}/${totalAmount}`)
+    console.log("立即购买请求路径:", "/cart/purchase");
+    console.log("请求数据:", orderData);
+
+    const response = await orderApi.purchaseDirectly(orderData); // 使用 orderApi 中的 purchaseDirectly
+    console.log("购买响应:", response);
+
+    if (response.state === 200) {
+      const { orderId, totalAmount } = response.data;
+      console.log("订单ID:", orderId, "总金额:", totalAmount); // 调试输出
+      router.push(`/payment/${orderId}/${totalAmount}`);
+    }
   } catch (error) {
-    console.error('创建订单失败:', error)
-    ElMessage.error('创建订单失败，请重试')
+    console.error("购买失败:", error);
+    ElMessage.error("购买失败，请重试");
   }
 };
 
@@ -276,16 +274,24 @@ onMounted(() => {
 <style scoped>
 .product-detail {
   max-width: 1200px;
-  margin: 20px auto;
+  margin: 80px auto;
   padding: 30px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
+  background: rgba(6, 5, 36, 0.95);
+  border-radius: 15px;
+  border: 1px solid rgba(250, 159, 252, 0.3);
+  transform: none !important;
+  transition: none !important;
+  box-shadow: none !important;
 }
 
 .product-gallery {
-  border-radius: 15px;
-  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  border: 1px solid rgba(250, 159, 252, 0.3);
+  transform: none !important;
+  transition: none !important;
+  box-shadow: none !important;
 }
 
 .product-title {

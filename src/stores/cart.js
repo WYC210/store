@@ -4,6 +4,7 @@ import { getCartItems, updateCartItem, removeFromCart } from '@/api/cart'
 export const useCartStore = defineStore('cart', {
   state: () => ({
     cartItems: [],
+    totalCount: 0,
     loading: false,
     error: null
   }),
@@ -22,56 +23,46 @@ export const useCartStore = defineStore('cart', {
   },
 
   actions: {
-    async fetchCartItems() {
-      this.loading = true
+    async fetchCartItems(items) {
       try {
-        const response = await getCartItems()
-        if (response.state === 200) {
-          this.cartItems = response.data.map(item => ({
+        if (Array.isArray(items)) {
+          this.cartItems = items.map(item => ({
             ...item,
-            selected: false
+            selected: false,
+            id: item.cartItemId
           }))
+          this.totalCount = this.cartItems.length
         } else {
-          throw new Error(response.message || '获取购物车失败')
+          console.error('购物车数据格式错误:', items)
+          throw new Error('购物车数据格式错误')
         }
       } catch (error) {
-        this.error = error.message
+        console.error('处理购物车数据失败:', error)
         throw error
-      } finally {
-        this.loading = false
       }
     },
 
-    async updateCartItem(item) {
+    async updateCartItem(data) {
       try {
-        const response = await updateCartItem(item)
-        if (response.state === 200) {
-          const index = this.cartItems.findIndex(i => i.id === item.id)
-          if (index !== -1) {
-            this.cartItems[index] = {
-              ...this.cartItems[index],
-              ...item
-            }
-          }
-        } else {
-          throw new Error(response.message || '更新购物车失败')
+        const index = this.cartItems.findIndex(item => item.id === data.id)
+        if (index !== -1) {
+          this.cartItems[index] = { ...this.cartItems[index], ...data }
         }
       } catch (error) {
-        this.error = error.message
+        console.error('更新购物车商品失败:', error)
         throw error
       }
     },
 
     async removeCartItem(itemId) {
       try {
-        const response = await removeFromCart(itemId)
-        if (response.state === 200) {
-          this.cartItems = this.cartItems.filter(item => item.id !== itemId)
-        } else {
-          throw new Error(response.message || '删除商品失败')
+        const index = this.cartItems.findIndex(item => item.id === itemId)
+        if (index !== -1) {
+          this.cartItems.splice(index, 1)
+          this.totalCount = this.cartItems.length
         }
       } catch (error) {
-        this.error = error.message
+        console.error('移除购物车商品失败:', error)
         throw error
       }
     },
