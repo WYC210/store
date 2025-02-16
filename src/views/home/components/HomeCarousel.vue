@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Picture } from '@element-plus/icons-vue'
 import { useBreakpoints } from '@vueuse/core'
 
@@ -39,7 +39,6 @@ const props = defineProps({
   }
 })
 
-// 轮播图数据
 const carouselItems = ref([
   {
     image: 'carousel1.jpg',
@@ -55,12 +54,22 @@ const carouselItems = ref([
   }
 ])
 
-// 响应式断点
 const breakpoints = useBreakpoints({
   mobile: 768
 })
 
 const isMobileView = computed(() => breakpoints.smaller('mobile'))
+
+const items = ref([])
+
+onMounted(() => {
+  fetchItems()
+})
+
+const fetchItems = async () => {
+  const response = await fetch('/api/items')
+  items.value = await response.json()
+}
 </script>
 
 <style scoped>

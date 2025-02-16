@@ -1,14 +1,10 @@
 <template>
   <div class="order-list" v-loading="loading">
-    <div
-      v-for="order in orders"
-      :key="order.orderId"
-      class="order-item"
-    >
+    <div v-for="order in orders" :key="order.orderId" class="order-item">
       <div class="order-header">
         <span class="order-id">订单号：{{ order.orderId }}</span>
-        <span class="order-status" :class="{ paid: order.isPaid }">
-          {{ order.isPaid ? "已支付" : "待支付" }}
+        <span class="order-status" :class="getStatusClass(order.status)">
+          {{ getStatusText(order.status) }}
         </span>
       </div>
 
@@ -18,7 +14,11 @@
           :key="item.productId"
           class="product-item"
         >
-          <el-image :src="item.productImage" fit="cover" class="product-image">
+          <el-image
+            :src="getImageUrl(item.imageUrl)"
+            fit="cover"
+            class="product-image"
+          >
             <template #error>
               <div class="image-placeholder">
                 <el-icon><Picture /></el-icon>
@@ -60,11 +60,12 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Picture } from "@element-plus/icons-vue";
 import orderApi from "@/api/order";
+import { useOrderStore } from "@/stores/order";
 
 const props = defineProps({
   orders: {
@@ -74,7 +75,44 @@ const props = defineProps({
 });
 
 const router = useRouter();
+const orderStore = useOrderStore();
 const loading = ref(false);
+
+// 订单状态映射
+const ORDER_STATUS = {
+  CREATED: '已创建',
+  PENDING_PAY: '待支付',
+  PAYING: '支付中',
+  PAID: '已支付',
+  CANCELLED: '已取消',
+  EXPIRED: '已过期'
+}
+
+// 获取订单状态文本
+const getStatusText = (status) => {
+  return ORDER_STATUS[status] || status
+}
+
+// 获取订单状态样式类
+const getStatusClass = (status) => {
+  return {
+    'status-created': status === 'CREATED',
+    'status-pending': status === 'PENDING_PAY',
+    'status-paying': status === 'PAYING',
+    'status-paid': status === 'PAID',
+    'status-cancelled': status === 'CANCELLED',
+    'status-expired': status === 'EXPIRED'
+  }
+}
+
+// 监听订单状态变化
+watch(
+  () => props.orders,
+  (newOrders) => {
+    console.log("订单列表更新:", newOrders);
+  },
+  { deep: true }
+);
 
 const handlePay = (order) => {
   router.push(`/payment/${order.orderId}/${order.totalAmount}`);
@@ -100,6 +138,15 @@ const handleCancel = async (order) => {
       ElMessage.error("取消订单失败");
     }
   }
+};
+
+// 添加处理图片 URL 的方法
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return "";
+  if (imageUrl.startsWith("http")) {
+    return imageUrl;
+  }
+  return `http://localhost:8088/${imageUrl}`;
 };
 </script>
 
@@ -130,13 +177,37 @@ const handleCancel = async (order) => {
 .order-status {
   padding: 4px 8px;
   border-radius: 4px;
-  background: rgba(255, 97, 210, 0.2);
-  color: var(--aurora-pink);
+  font-size: 14px;
 }
 
-.order-status.paid {
-  background: rgba(36, 208, 254, 0.2);
-  color: var(--cosmic-blue);
+.status-created {
+  background: rgba(64, 158, 255, 0.1);
+  color: #409EFF;
+}
+
+.status-pending {
+  background: rgba(230, 162, 60, 0.1);
+  color: #E6A23C;
+}
+
+.status-paying {
+  background: rgba(144, 147, 153, 0.1);
+  color: #909399;
+}
+
+.status-paid {
+  background: rgba(103, 194, 58, 0.1);
+  color: #67C23A;
+}
+
+.status-cancelled {
+  background: rgba(245, 108, 108, 0.1);
+  color: #F56C6C;
+}
+
+.status-expired {
+  background: rgba(144, 147, 153, 0.1);
+  color: #909399;
 }
 
 .product-item {

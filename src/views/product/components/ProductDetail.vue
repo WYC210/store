@@ -104,10 +104,11 @@ import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ShoppingCart, Picture } from "@element-plus/icons-vue";
 import { getProductDetail, addToCart } from "@/api/product";
-import orderApi from "@/api/order"; // 确保导入 orderApi
+import { createOrder } from "@/api/order";
 import { useUserStore } from "@/stores/user";
 import { useOrderStore } from "@/stores/order";
 import { useCategoryStore } from "@/stores/category";
+import cartApi from "@/api/cart";
 
 const route = useRoute();
 const router = useRouter();
@@ -229,34 +230,38 @@ const handleAddToCart = async () => {
 
 // 立即购买
 const handleBuyNow = async () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning("请先登录");
-    router.push("/login");
-    return;
-  }
-
   try {
+    // 准备订单数据
     const orderData = {
-      productId: product.value.productId,
-      quantity: 1, // 默认购买数量为1
-    };
+      items: [{
+        productId: String(productId), // 确保 productId 是字符串
+        quantity: quantity.value,
+        price: product.value.price,
+        productName: product.value.name,
+        imageUrl: product.value.images[0]
+      }]
+    }
 
-    console.log("立即购买请求路径:", "/cart/purchase");
-    console.log("请求数据:", orderData);
-
-    const response = await orderApi.purchaseDirectly(orderData); // 使用 orderApi 中的 purchaseDirectly
-    console.log("购买响应:", response);
+    console.log('发送立即购买请求:', orderData)
+    const response = await createOrder(orderData)
+    console.log('立即购买响应:', response)
 
     if (response.state === 200) {
-      const { orderId, totalAmount } = response.data;
-      console.log("订单ID:", orderId, "总金额:", totalAmount); // 调试输出
-      router.push(`/payment/${orderId}/${totalAmount}`);
+      const { orderId, totalAmount } = response.data
+      // 保存订单信息到 store
+      const orderStore = useOrderStore()
+      orderStore.currentOrder = {
+        orderId,
+        totalAmount,
+        items: orderData.items
+      }
+      router.push(`/payment/${orderId}/${totalAmount}`)
     }
   } catch (error) {
-    console.error("购买失败:", error);
-    ElMessage.error("购买失败，请重试");
+    console.error('立即购买失败:', error)
+    ElMessage.error('购买失败，请重试')
   }
-};
+}
 
 // 处理图片加载错误
 const handleImageError = () => {

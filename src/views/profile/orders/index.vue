@@ -27,14 +27,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { HomeFilled } from '@element-plus/icons-vue'
 import orderApi from '@/api/order'
+import { useOrderStore } from '@/stores/order'
 import OrderList from './components/OrderList.vue'
 
 const router = useRouter()
+const orderStore = useOrderStore()
 const activeTab = ref('all')
 const orders = ref([])
 const loading = ref(false)
@@ -58,6 +60,8 @@ const fetchOrders = async () => {
     const response = await orderApi.getOrderList()
     if (response.state === 200) {
       orders.value = response.data
+      // 同步到 store
+      orderStore.orderList = response.data
     }
   } catch (error) {
     console.error('获取订单列表失败:', error)
@@ -66,6 +70,11 @@ const fetchOrders = async () => {
     loading.value = false
   }
 }
+
+// 监听 orderStore 中的订单列表变化
+watch(() => orderStore.orderList, (newOrderList) => {
+  orders.value = newOrderList
+}, { deep: true })
 
 const handleTabClick = () => {
   // 可以在这里添加额外的处理逻辑

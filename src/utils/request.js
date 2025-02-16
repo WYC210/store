@@ -34,16 +34,18 @@ request.interceptors.request.use(
     console.log('发送请求:', {
       url: config.baseURL + config.url,
       method: config.method,
-      data: config.data
-    });
+      data: config.data,
+      params: config.params
+    })
     
     const token = getCookie('token')
-    if (token && isAuthRequired(config.url)) {
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
   error => {
+    console.error('请求错误:', error)
     return Promise.reject(error)
   }
 )
@@ -51,26 +53,19 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
-    if (response.data.state === 500) {
-      return Promise.reject(new Error(response.data.message))
-    }
-    if (response.data.state === 401) {
-      const userStore = useUserStore()
-      userStore.logout()
-      router.push({
-        path: '/login',
-        query: { redirect: router.currentRoute.value.fullPath }
-      })
-      return Promise.reject(new Error('请先登录'))
-    }
+    console.log('接收响应:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    })
     return response.data
   },
   error => {
-    console.error('API Error:', {
+    console.error('响应错误:', {
       url: error.config?.url,
       status: error.response?.status,
       message: error.message,
-      response: error.response?.data
+      data: error.response?.data
     })
     
     if (error.response?.status === 401) {

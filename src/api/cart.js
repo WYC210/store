@@ -37,13 +37,32 @@ const cartApi = {
   },
 
   // 从购物车删除商品
-  removeFromCart: async (itemId) => {
-    console.log('发送请求: 从购物车删除商品', itemId)
+  deleteCartItem: async (cartItemId) => {
+    console.log('发送请求: 删除购物车商品', cartItemId)
     const response = await request({
-      url: `/cart/${itemId}`,
+      url: `/cart/${cartItemId}`,
       method: 'DELETE'
     })
-    console.log('从购物车删除商品响应:', response)
+    console.log('删除购物车商品响应:', response)
+    return response
+  },
+
+  // 直接购买商品
+  purchaseDirectly: async (orderData) => {
+    // 确保 productId 是字符串格式
+    const productId = String(orderData.productId);
+    const quantity = Math.max(1, orderData.quantity); // 确保数量是正整数
+
+    console.log('发送直接购买请求:', { productId, quantity });
+    const response = await request({
+      url: '/cart/purchase',
+      method: 'POST',
+      data: {
+        productId, // 使用字符串格式的 productId
+        quantity   // 确保数量是正整数
+      }
+    })
+    console.log('直接购买响应:', response)
     return response
   },
 

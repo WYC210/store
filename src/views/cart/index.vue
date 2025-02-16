@@ -119,12 +119,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
 import { getProductDetail } from '@/api/product'
-import orderApi from '@/api/order'
+import { createOrder } from '@/api/order'
 import cartApi from '@/api/cart'
+import { useOrderStore } from '@/stores/order'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const userStore = useUserStore()
+const orderStore = useOrderStore()
 const loading = ref(false)
 
 const cartItems = ref([])
@@ -203,11 +205,24 @@ const removeItem = async (itemId) => {
     await ElMessageBox.confirm('确定要删除这个商品吗？', '提示', {
       type: 'warning'
     })
-    await cartStore.removeCartItem(itemId)
-    ElMessage.success('删除成功')
+    
+    console.log('准备删除购物车商品，ID:', itemId)
+    
+    // 发送删除请求
+    const response = await cartApi.deleteCartItem(itemId)
+    console.log('删除购物车商品响应:', response)
+    
+    if (response.state === 200) {
+      ElMessage.success(response.message || '删除成功')
+      // 重新获取购物车数据
+      await fetchCartData()
+    } else {
+      ElMessage.error(response.message || '删除失败')
+    }
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      console.error('删除购物车商品失败:', error)
+      ElMessage.error('删除失败，请重试')
     }
   }
 }
@@ -234,20 +249,25 @@ const handleCheckout = async () => {
       items: selectedItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        productName: item.productName,
+        imageUrl: item.imageUrl
       }))
     }
     
-    // 添加调试输出
     console.log('发送结算请求，请求数据:', orderData)
-    
-    // 使用 orderApi.createOrder 替代 createOrder
-    const response = await orderApi.createOrder(orderData)
+    const response = await createOrder(orderData)
     console.log('结算响应:', response)
     
     if (response.state === 200) {
       const { orderId, totalAmount } = response.data
-      console.log('创建订单成功，订单ID:', orderId, '总金额:', totalAmount)
+      // 保存订单信息到 store
+      const orderStore = useOrderStore()
+      orderStore.currentOrder = {
+        orderId,
+        totalAmount,
+        items: orderData.items
+      }
       router.push(`/payment/${orderId}/${totalAmount}`)
     }
   } catch (error) {

@@ -18,15 +18,17 @@
         <h3>商品详情:</h3>
         <ul>
           <li v-for="item in productDetails" :key="item.cartItemId">
-            {{ item.productName }} - 数量: {{ item.quantity }} - 价格: ¥{{ item.price }}
+            {{ item.productName }} - 数量: {{ item.quantity }} - 价格: ¥{{
+              item.price
+            }}
           </li>
         </ul>
       </div>
 
       <div class="payment-actions">
-        <el-button 
-          type="primary" 
-          @click="handlePayment" 
+        <el-button
+          type="primary"
+          @click="handlePayment"
           :loading="paymentLoading"
           class="pay-btn"
         >
@@ -39,64 +41,71 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import orderApi from '@/api/order'
-import { generatePaymentId } from '@/utils/payment'
-import { useCheckoutStore } from '@/stores/checkout'
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import orderApi from "@/api/order";
+import { generatePaymentId } from "@/utils/payment";
+import { useCheckoutStore } from "@/stores/checkout";
+import { useOrderStore } from "@/stores/order";
 
-const route = useRoute()
-const router = useRouter()
-const loading = ref(false)
-const paymentLoading = ref(false)
+const route = useRoute();
+const router = useRouter();
+const loading = ref(false);
+const paymentLoading = ref(false);
 
 // 从路由参数中获取订单信息
-const orderId = ref(route.params.orderId)
-const totalAmount = ref(route.params.totalAmount)
-const checkoutStore = useCheckoutStore()
-const productDetails = ref(checkoutStore.checkoutItems)
+const orderId = ref(route.params.orderId);
+const totalAmount = ref(route.params.totalAmount);
+const checkoutStore = useCheckoutStore();
+const productDetails = ref(checkoutStore.checkoutItems);
 
 // 添加调试信息
-console.log('支付页面路由参数:', {
+console.log("支付页面路由参数:", {
   orderId: orderId.value,
-  totalAmount: totalAmount.value
-})
+  totalAmount: totalAmount.value,
+});
 
 // 如果没有订单信息，跳转回购物车
 onMounted(() => {
   if (!orderId.value || !totalAmount.value) {
-    ElMessage.error('订单信息不完整')
-    router.push('/cart')
+    ElMessage.error("订单信息不完整");
+    router.push("/cart");
   }
-})
+});
 
 const handlePayment = async () => {
-  paymentLoading.value = true
+  paymentLoading.value = true;
   try {
     const paymentData = {
       orderId: orderId.value,
-      amount: totalAmount.value
-    }
-    const response = await orderApi.payOrder(orderId.value, paymentData)
-    console.log('支付响应:', response)
+      amount: totalAmount.value,
+    };
+    const response = await orderApi.payOrder(orderId.value, paymentData);
+    console.log("支付响应:", response);
     if (response.state === 200) {
-      ElMessage.success('支付成功！')
+      // 更新订单状态
+      const orderStore = useOrderStore();
+      console.log("准备更新订单状态");
+      await orderStore.updateOrderStatus(orderId.value, "PAID");
+      // 重新获取订单列表以确保数据同步
+      await orderStore.fetchOrderList();
+      ElMessage.success("支付成功！");
       // 支付成功后跳转到订单列表页面
-      router.push('/profile/orders')
+      router.push("/profile/orders");
     }
   } catch (error) {
-    console.error('支付失败:', error)
-    ElMessage.error('支付失败，请重试')
+    console.error("支付失败:", error);
+    ElMessage.error("支付失败，请重试");
   } finally {
-    paymentLoading.value = false
+    paymentLoading.value = false;
   }
-}
+};
 
 const cancelPayment = () => {
-  ElMessage.warning('取消支付')
-  router.push('/profile/orders')
-}
+  ElMessage.warning("取消支付");
+  router.push("/profile/orders");
+};
 </script>
 
 <style scoped>
@@ -158,4 +167,4 @@ const cancelPayment = () => {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(250, 159, 252, 0.3);
 }
-</style> 
+</style>
