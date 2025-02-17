@@ -12,8 +12,8 @@
 
     <div class="cart-header">
       <div class="cart-summary">
-        已选择 <span class="highlight">{{ selectedCount }}</span> 件商品
-        总计: <span class="price">¥{{ totalPrice.toFixed(2) }}</span>
+        已选择 <span class="highlight">{{ selectedCount }}</span> 件商品 总计:
+        <span class="price">¥{{ totalPrice.toFixed(2) }}</span>
       </div>
     </div>
 
@@ -21,10 +21,10 @@
     <div class="cart-list" v-loading="loading">
       <template v-if="cartItems.length">
         <div class="cart-item" v-for="item in cartItems" :key="item.cartItemId">
-          <el-checkbox v-model="item.selected" @change="updateSelection"/>
-          
+          <el-checkbox v-model="item.selected" @change="updateSelection" />
+
           <div class="item-image">
-            <el-image 
+            <el-image
               :src="getImageUrl(item.imageUrl)"
               fit="cover"
               class="product-image"
@@ -44,21 +44,23 @@
           </div>
 
           <div class="item-quantity">
-            <el-input-number 
-              v-model="item.quantity" 
-              :min="1" 
+            <el-input-number
+              v-model="item.quantity"
+              :min="1"
               :max="item.product ? item.product.stock : 1"
               @change="updateQuantity(item)"
             />
           </div>
 
           <div class="item-total">
-            <p class="total-price">¥{{ (item.price * item.quantity).toFixed(2) }}</p>
+            <p class="total-price">
+              ¥{{ (item.price * item.quantity).toFixed(2) }}
+            </p>
           </div>
 
           <div class="item-actions">
-            <el-button 
-              type="danger" 
+            <el-button
+              type="danger"
               circle
               @click="removeItem(item.cartItemId)"
             >
@@ -86,21 +88,18 @@
     <!-- 底部结算栏 -->
     <div class="cart-footer" v-if="cartItems.length">
       <div class="select-all">
-        <el-checkbox 
-          v-model="isAllSelected"
-          @change="toggleSelectAll"
-        >
+        <el-checkbox v-model="isAllSelected" @change="toggleSelectAll">
           全选
         </el-checkbox>
       </div>
-      
+
       <div class="checkout-info">
         <div class="total-section">
           <span>总计:</span>
           <span class="total-price">¥{{ totalPrice.toFixed(2) }}</span>
         </div>
-        <el-button 
-          type="primary" 
+        <el-button
+          type="primary"
           :disabled="!selectedCount"
           @click="handleCheckout"
           class="checkout-btn hologram-btn"
@@ -113,129 +112,135 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useCartStore } from '@/stores/cart'
-import { useUserStore } from '@/stores/user'
-import { getProductDetail } from '@/api/product'
-import { createOrder } from '@/api/order'
-import cartApi from '@/api/cart'
-import { useOrderStore } from '@/stores/order'
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { useCartStore } from "@/stores/cart";
+import { useUserStore } from "@/stores/user";
+import { getProductDetail } from "@/api/product";
+import { createOrder } from "@/api/order";
+import cartApi from "@/api/cart";
+import { useOrderStore } from "@/stores/order";
+import { useCheckoutStore } from "@/stores/checkout";
 
-const router = useRouter()
-const cartStore = useCartStore()
-const userStore = useUserStore()
-const orderStore = useOrderStore()
-const loading = ref(false)
+const router = useRouter();
+const cartStore = useCartStore();
+const userStore = useUserStore();
+const orderStore = useOrderStore();
+const checkoutStore = useCheckoutStore();
+const loading = ref(false);
 
-const cartItems = ref([])
+const cartItems = ref([]);
 
 const fetchCartData = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    console.log('请求购物车商品列表...')
-    const response = await cartApi.getCartItems()
-    console.log('购物车商品列表:', response)
+    console.log("请求购物车商品列表...");
+    const response = await cartApi.getCartItems();
+    console.log("购物车商品列表:", response);
 
     // 直接使用返回的数据
     if (response.state === 200 && Array.isArray(response.data)) {
-      cartItems.value = response.data // 直接赋值
+      cartItems.value = response.data; // 直接赋值
     } else {
-      console.error('购物车数据格式错误:', response)
-      ElMessage.error('获取购物车数据失败')
+      console.error("购物车数据格式错误:", response);
+      ElMessage.error("获取购物车数据失败");
     }
   } catch (error) {
-    console.error('获取购物车数据失败:', error)
-    ElMessage.error('获取购物车数据失败')
+    console.error("获取购物车数据失败:", error);
+    ElMessage.error("获取购物车数据失败");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // 获取产品详情
 const fetchProductDetails = async () => {
   try {
     for (const item of cartItems.value) {
-      if (item.productId) {  // 确保有 productId
-        const productResponse = await getProductDetail(item.productId)
+      if (item.productId) {
+        // 确保有 productId
+        const productResponse = await getProductDetail(item.productId);
         if (productResponse.state === 200) {
-          item.product = productResponse.data
+          item.product = productResponse.data;
         } else {
-          console.error('获取产品详情失败:', productResponse)
+          console.error("获取产品详情失败:", productResponse);
         }
       }
     }
   } catch (error) {
-    console.error('获取产品详情失败:', error)
-    ElMessage.error('获取产品详情失败')
+    console.error("获取产品详情失败:", error);
+    ElMessage.error("获取产品详情失败");
   }
-}
+};
 
 // 计算属性
-const selectedCount = computed(() => cartItems.value.filter(item => item.selected).length)
+const selectedCount = computed(
+  () => cartItems.value.filter((item) => item.selected).length
+);
 const totalPrice = computed(() => {
   return cartItems.value.reduce((total, item) => {
     if (item.selected) {
-      return total + (item.price * item.quantity)
+      return total + item.price * item.quantity;
     }
-    return total
-  }, 0)
-})
+    return total;
+  }, 0);
+});
 
 const isAllSelected = computed({
-  get: () => cartItems.value.length && cartItems.value.every(item => item.selected),
-  set: (value) => toggleSelectAll(value)
-})
+  get: () =>
+    cartItems.value.length && cartItems.value.every((item) => item.selected),
+  set: (value) => toggleSelectAll(value),
+});
 
 // 方法
 const updateQuantity = async (item) => {
   try {
     await cartStore.updateCartItem({
       id: item.cartItemId,
-      quantity: item.quantity
-    })
+      quantity: item.quantity,
+    });
   } catch (error) {
-    ElMessage.error('更新数量失败')
+    ElMessage.error("更新数量失败");
   }
-}
+};
 
 const removeItem = async (itemId) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个商品吗？', '提示', {
-      type: 'warning'
-    })
-    
-    console.log('准备删除购物车商品，ID:', itemId)
-    
+    await ElMessageBox.confirm("确定要删除这个商品吗？", "提示", {
+      type: "warning",
+    });
+
+    console.log("准备删除购物车商品，ID:", itemId);
+
     // 发送删除请求
-    const response = await cartApi.deleteCartItem(itemId)
-    console.log('删除购物车商品响应:', response)
-    
+    const response = await cartApi.deleteCartItem(itemId);
+    console.log("删除购物车商品响应:", response);
+
     if (response.state === 200) {
-      ElMessage.success(response.message || '删除成功')
+      ElMessage.success(response.message || "删除成功");
       // 重新获取购物车数据
-      await fetchCartData()
+      await fetchCartData();
     } else {
-      ElMessage.error(response.message || '删除失败')
+      ElMessage.error(response.message || "删除失败");
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除购物车商品失败:', error)
-      ElMessage.error('删除失败，请重试')
+    if (error !== "cancel") {
+      console.error("删除购物车商品失败:", error);
+      ElMessage.error("删除失败，请重试");
     }
   }
-}
+};
 
 const toggleSelectAll = (value) => {
-  cartItems.value.forEach(item => {
-    item.selected = value
-  })
-}
+  cartItems.value.forEach((item) => {
+    item.selected = value;
+  });
+};
 
 const updateSelection = () => {
-  cartStore.updateSelection(cartItems.value)
-}
+  cartStore.updateSelection(cartItems.value);
+};
 
 const handleCheckout = async () => {
   const selectedItems = cartItems.value.filter(item => item.selected)
@@ -249,25 +254,25 @@ const handleCheckout = async () => {
       items: selectedItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
-        price: item.price,
+        price: item.price.toFixed(2),
         productName: item.productName,
         imageUrl: item.imageUrl
       }))
     }
     
     console.log('发送结算请求，请求数据:', orderData)
-    const response = await createOrder(orderData)
+    const response = await cartApi.purchase(orderData)
     console.log('结算响应:', response)
     
     if (response.state === 200) {
       const { orderId, totalAmount } = response.data
-      // 保存订单信息到 store
-      const orderStore = useOrderStore()
       orderStore.currentOrder = {
         orderId,
         totalAmount,
         items: orderData.items
       }
+
+      checkoutStore.setCheckoutItems(selectedItems)
       router.push(`/payment/${orderId}/${totalAmount}`)
     }
   } catch (error) {
@@ -278,25 +283,25 @@ const handleCheckout = async () => {
 
 // 添加处理图片 URL 的方法
 const getImageUrl = (imageUrl) => {
-  if (!imageUrl) return ''
+  if (!imageUrl) return "";
   // 如果已经是完整的 URL，则直接返回
-  if (imageUrl.startsWith('http')) {
-    return imageUrl
+  if (imageUrl.startsWith("http")) {
+    return imageUrl;
   }
   // 否则，添加后端基础 URL
-  return `http://localhost:8088/${imageUrl}`
-}
+  return `http://localhost:8088/${imageUrl}`;
+};
 
 onMounted(() => {
   if (!userStore.isLoggedIn) {
     router.push({
-      path: '/login',
-      query: { redirect: '/cart' }
-    })
-    return
+      path: "/login",
+      query: { redirect: "/cart" },
+    });
+    return;
   }
-  fetchCartData()
-})
+  fetchCartData();
+});
 </script>
 
 <style scoped>
@@ -498,4 +503,4 @@ onMounted(() => {
   align-items: center;
   gap: 5px;
 }
-</style> 
+</style>

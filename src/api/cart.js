@@ -50,10 +50,10 @@ const cartApi = {
   // 直接购买商品
   purchaseDirectly: async (orderData) => {
     // 确保 productId 是字符串格式
-    const productId = String(orderData.productId);
-    const quantity = Math.max(1, orderData.quantity); // 确保数量是正整数
+    const productId = String(orderData.productId)
+    const quantity = Math.max(1, orderData.quantity) // 确保数量是正整数
 
-    console.log('发送直接购买请求:', { productId, quantity });
+    console.log('发送直接购买请求:', { productId, quantity })
     const response = await request({
       url: '/cart/purchase',
       method: 'POST',
@@ -70,11 +70,28 @@ const cartApi = {
   clearCart: async () => {
     console.log('发送请求: 清空购物车')
     const response = await request({
-      url: '/cart/clear',
+      url: '/cart',
       method: 'DELETE'
     })
     console.log('清空购物车响应:', response)
     return response
+  },
+
+  // 获取购物车总金额
+  getCartTotal: async () => {
+    return request({
+      url: '/cart/total',
+      method: 'GET'
+    })
+  },
+
+  // 购买商品
+  purchase: async (data) => {
+    return request({
+      url: '/orders/purchase',
+      method: 'POST',
+      data
+    })
   }
 }
 

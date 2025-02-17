@@ -233,17 +233,15 @@ const handleBuyNow = async () => {
   try {
     // 准备订单数据
     const orderData = {
-      items: [{
-        productId: String(productId), // 确保 productId 是字符串
-        quantity: quantity.value,
-        price: product.value.price,
-        productName: product.value.name,
-        imageUrl: product.value.images[0]
-      }]
+      productId: String(productId),
+      quantity: quantity.value,
+      price: product.value.price.toFixed(2),
+      productName: product.value.name,
+      imageUrl: product.value.images[0]
     }
 
     console.log('发送立即购买请求:', orderData)
-    const response = await createOrder(orderData)
+    const response = await cartApi.purchaseDirectly(orderData)
     console.log('立即购买响应:', response)
 
     if (response.state === 200) {
@@ -253,7 +251,13 @@ const handleBuyNow = async () => {
       orderStore.currentOrder = {
         orderId,
         totalAmount,
-        items: orderData.items
+        items: [{
+          productId: String(productId),
+          quantity: quantity.value,
+          price: product.value.price,
+          productName: product.value.name,
+          imageUrl: product.value.images[0]
+        }]
       }
       router.push(`/payment/${orderId}/${totalAmount}`)
     }

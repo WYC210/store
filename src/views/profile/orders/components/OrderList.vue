@@ -46,7 +46,11 @@
           >
             立即支付
           </el-button>
-          <el-button v-if="!order.isPaid" @click="handleCancel(order)">
+          <el-button
+            v-if="order.status === 'PENDING_PAY'"
+            type="danger"
+            @click="handleCancel(order)"
+          >
             取消订单
           </el-button>
         </div>
