@@ -5,61 +5,70 @@ import { ElMessage } from 'element-plus'
 export function useProducts() {
   const products = ref([])
   const loading = ref(false)
+  
+  // 分页信息
   const pagination = reactive({
     total: 0,
-    pages: 0,
-    pageNum: 1,
-    pageSize: 10
+    pageSize: 10,
+    currentPage: 1
   })
 
+  // 请求参数
   const productParams = reactive({
     pageNum: 1,
     pageSize: 10,
-    categoryId: undefined,
-    keyword: '',
+    keyword: ''
   })
 
-  // 获取商品列表
   const fetchProducts = async () => {
     loading.value = true
     try {
       const response = await getProducts(productParams)
       console.log('商品列表响应:', response)
       
-      if (response?.list) {
+      // 直接使用返回的数据结构
+      if (response && response.list) {
+        // 处理商品数据
         products.value = response.list.map(product => ({
-          productId: product.productId,
-          name: product.name,
-          price: product.price,
-          description: product.description,
-          imageUrl: `http://localhost:8088/products${product.imageUrl}`,
-          stock: product.stock,
-          rating: product.rating || 0,
-          reviewCount: product.reviewCount || 0,
+          ...product,
+          // 确保图片路径正确
+          imageUrl: product.imageUrl.startsWith('http') 
+            ? product.imageUrl 
+            : `http://localhost:8088${product.imageUrl}`,
+          // 确保数值类型正确
+          price: Number(product.price),
+          rating: Number(product.rating),
+          reviewCount: Number(product.reviewCount),
+          stock: Number(product.stock)
         }))
-
-        Object.assign(pagination, {
-          total: response.total || 0,
-          pages: response.pages || 1,
-          pageNum: response.pageNum || 1,
-          pageSize: response.pageSize || 10
-        })
+        
+        // 更新分页信息
+        pagination.total = response.total
+        pagination.currentPage = response.pageNum
+        pagination.pageSize = response.pageSize
       } else {
         throw new Error('获取商品列表失败')
       }
     } catch (error) {
       console.error('获取商品列表失败:', error)
-      ElMessage.error('获取商品列表失败，请稍后重试')
+      ElMessage.error(error.message || '获取商品列表失败')
       products.value = []
-      Object.assign(pagination, {
-        total: 0,
-        pages: 1,
-        pageNum: 1,
-        pageSize: 10
-      })
     } finally {
       loading.value = false
     }
+  }
+
+  // 处理分页变化
+  const handlePageChange = (newPage) => {
+    productParams.pageNum = newPage
+    fetchProducts()
+  }
+
+  // 处理每页数量变化
+  const handleSizeChange = (newSize) => {
+    productParams.pageSize = newSize
+    productParams.pageNum = 1 // 重置到第一页
+    fetchProducts()
   }
 
   return {
@@ -67,6 +76,8 @@ export function useProducts() {
     loading,
     pagination,
     productParams,
-    fetchProducts
+    fetchProducts,
+    handlePageChange,
+    handleSizeChange
   }
 } 

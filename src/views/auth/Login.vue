@@ -163,25 +163,16 @@ const rules = {
 };
 
 const handleLogin = async () => {
-  try {
-    loading.value = true;
-    const success = await userStore.login({
-      username: formData.value.username,
-      password: formData.value.password,
-    });
-    if (success) {
-      // 验证 token 是否正确保存
-      const token = getCookie("token");
-      if (!token) {
-        throw new Error("登录失败：token 未保存");
-      }
+  if (!loginFormRef.value) return;
 
-      ElMessage.success("登录成功");
-      const redirect = route.query.redirect || "/home";
-      router.push(redirect);
-    } else {
-      ElMessage.error("登录失败");
-    }
+  try {
+    await loginFormRef.value.validate();
+    loading.value = true;
+
+    await userStore.login(formData.value);
+    ElMessage.success("登录成功");
+    const redirect = route.query.redirect || "/home";
+    router.push(redirect);
   } catch (error) {
     console.error("登录错误:", error);
     ElMessage.error(error.message || "登录失败");

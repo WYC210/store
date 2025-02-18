@@ -110,7 +110,9 @@ const confirmOrder = async () => {
     };
 
     const orderResponse = await createOrder(orderData);
-    const { orderId, totalAmount } = orderResponse.data;
+    // 确保从响应中提取订单号和总金额
+    const orderId = orderResponse.cartItemId; // 根据后端返回的字段获取订单 ID
+    const totalAmount = orderResponse.price * orderResponse.quantity; // 根据返回的价格和数量计算总金额
 
     // 2. 跳转到支付页面
     router.push(`/payment/${orderId}/${totalAmount}`);

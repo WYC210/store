@@ -19,13 +19,13 @@
 
     <!-- 购物车列表 -->
     <div class="cart-list" v-loading="loading">
-      <template v-if="cartItems.length">
-        <div class="cart-item" v-for="item in cartItems" :key="item.cartItemId">
+      <template v-if="cartStore.cartItems.length">
+        <div class="cart-item" v-for="item in cartStore.cartItems" :key="item.cartItemId">
           <el-checkbox v-model="item.selected" @change="updateSelection" />
 
           <div class="item-image">
             <el-image
-              :src="getImageUrl(item.imageUrl)"
+              :src="getImageUrl(item.imageUrl || item.product.imageUrl)"
               fit="cover"
               class="product-image"
             >
@@ -86,7 +86,7 @@
     </div>
 
     <!-- 底部结算栏 -->
-    <div class="cart-footer" v-if="cartItems.length">
+    <div class="cart-footer" v-if="cartStore.cartItems.length">
       <div class="select-all">
         <el-checkbox v-model="isAllSelected" @change="toggleSelectAll">
           全选
@@ -130,34 +130,35 @@ const orderStore = useOrderStore();
 const checkoutStore = useCheckoutStore();
 const loading = ref(false);
 
-const cartItems = ref([]);
-
 const fetchCartData = async () => {
-  loading.value = true;
   try {
-    console.log("请求购物车商品列表...");
-    const response = await cartApi.getCartItems();
-    console.log("购物车商品列表:", response);
+    const cartItems = await cartApi.getCartItems();
+    console.log("购物车商品列表:", cartItems);
 
-    // 直接使用返回的数据
-    if (response.state === 200 && Array.isArray(response.data)) {
-      cartItems.value = response.data; // 直接赋值
-    } else {
-      console.error("购物车数据格式错误:", response);
-      ElMessage.error("获取购物车数据失败");
+    // 验证购物车数据格式
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      throw new Error("购物车数据格式错误");
     }
+
+    // 进一步验证每个购物车项的结构
+    cartItems.forEach(item => {
+      if (!item.cartItemId || !item.productId || !item.quantity) {
+        throw new Error("购物车项格式错误");
+      }
+    });
+
+    // 处理购物车数据
+    cartStore.setCartItems(cartItems);
   } catch (error) {
     console.error("获取购物车数据失败:", error);
-    ElMessage.error("获取购物车数据失败");
-  } finally {
-    loading.value = false;
+    ElMessage.error(error.message || "获取购物车数据失败");
   }
 };
 
 // 获取产品详情
 const fetchProductDetails = async () => {
   try {
-    for (const item of cartItems.value) {
+    for (const item of cartStore.cartItems) {
       if (item.productId) {
         // 确保有 productId
         const productResponse = await getProductDetail(item.productId);
@@ -176,12 +177,12 @@ const fetchProductDetails = async () => {
 
 // 计算属性
 const selectedCount = computed(
-  () => cartItems.value.filter((item) => item.selected).length
+  () => cartStore.cartItems.filter((item) => item.selected).length
 );
 const totalPrice = computed(() => {
-  return cartItems.value.reduce((total, item) => {
+  return cartStore.cartItems.reduce((total, item) => {
     if (item.selected) {
-      return total + item.price * item.quantity;
+      return total + (item.price * item.quantity);
     }
     return total;
   }, 0);
@@ -189,7 +190,7 @@ const totalPrice = computed(() => {
 
 const isAllSelected = computed({
   get: () =>
-    cartItems.value.length && cartItems.value.every((item) => item.selected),
+    cartStore.cartItems.length && cartStore.cartItems.every((item) => item.selected),
   set: (value) => toggleSelectAll(value),
 });
 
@@ -214,16 +215,10 @@ const removeItem = async (itemId) => {
     console.log("准备删除购物车商品，ID:", itemId);
 
     // 发送删除请求
-    const response = await cartApi.deleteCartItem(itemId);
-    console.log("删除购物车商品响应:", response);
-
-    if (response.state === 200) {
-      ElMessage.success(response.message || "删除成功");
-      // 重新获取购物车数据
-      await fetchCartData();
-    } else {
-      ElMessage.error(response.message || "删除失败");
-    }
+    await cartApi.deleteCartItem(itemId);
+    ElMessage.success("删除成功");
+    // 重新获取购物车数据
+    await fetchCartData();
   } catch (error) {
     if (error !== "cancel") {
       console.error("删除购物车商品失败:", error);
@@ -233,53 +228,53 @@ const removeItem = async (itemId) => {
 };
 
 const toggleSelectAll = (value) => {
-  cartItems.value.forEach((item) => {
+  cartStore.cartItems.forEach((item) => {
     item.selected = value;
   });
 };
 
 const updateSelection = () => {
-  cartStore.updateSelection(cartItems.value);
+  cartStore.updateSelection(cartStore.cartItems);
 };
 
 const handleCheckout = async () => {
-  const selectedItems = cartItems.value.filter(item => item.selected)
+  const selectedItems = cartStore.cartItems.filter((item) => item.selected);
   if (!selectedItems.length) {
-    ElMessage.warning('请至少选择一件商品进行结算')
-    return
+    ElMessage.warning("请至少选择一件商品进行结算");
+    return;
   }
 
   try {
     const orderData = {
-      items: selectedItems.map(item => ({
+      items: selectedItems.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
         price: item.price.toFixed(2),
         productName: item.productName,
-        imageUrl: item.imageUrl
-      }))
-    }
-    
-    console.log('发送结算请求，请求数据:', orderData)
-    const response = await cartApi.purchase(orderData)
-    console.log('结算响应:', response)
-    
+        imageUrl: item.imageUrl,
+      })),
+    };
+
+    console.log("发送结算请求，请求数据:", orderData);
+    const response = await cartApi.purchase(orderData);
+    console.log("结算响应:", response);
+
     if (response.state === 200) {
-      const { orderId, totalAmount } = response.data
+      const { orderId, totalAmount } = response.data;
       orderStore.currentOrder = {
         orderId,
         totalAmount,
-        items: orderData.items
-      }
+        items: orderData.items,
+      };
 
-      checkoutStore.setCheckoutItems(selectedItems)
-      router.push(`/payment/${orderId}/${totalAmount}`)
+      checkoutStore.setCheckoutItems(selectedItems);
+      router.push(`/payment/${orderId}/${totalAmount}`);
     }
   } catch (error) {
-    console.error('结算失败:', error)
-    ElMessage.error('结算失败，请重试')
+    console.error("结算失败:", error);
+    ElMessage.error("结算失败，请重试");
   }
-}
+};
 
 // 添加处理图片 URL 的方法
 const getImageUrl = (imageUrl) => {

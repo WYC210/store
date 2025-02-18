@@ -45,7 +45,7 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/profile/index.vue'),
-    meta: { 
+    meta: {
       requiresAuth: true
     }
   },
@@ -162,37 +162,31 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
-  // 初始化用户状态
-  try {
-    await userStore.initializeFromStorage()
-   
-    // 如果是访问根路径，重定向到首页
-    if (to.path === '/') {
-      next('/home')
-      return
-    }
+  // 如果是访问根路径，重定向到首页
+  if (to.path === '/') {
+    next('/home')
+    return
+  }
 
-    // 需要登录的路由
-    if (to.meta.requiresAuth) {
-      if (!userStore.isLoggedIn) {
-        try {
-          await userStore.validateToken()
-          next()
-        } catch (error) {
-          next({
-            path: '/login',
-            query: { redirect: to.fullPath }
-          })
-        }
-      } else {
-        next()
-      }
+  // 需要登录的路由
+  if (to.meta.requiresAuth) {
+    const accessToken = localStorage.getItem('accessToken')
+    const refreshToken = localStorage.getItem('refreshToken')
+
+    if (!accessToken || !refreshToken) {
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
     } else {
+      // 已经登录，直接放行
+      if (!userStore.isLoggedIn) {
+        await userStore.initializeFromStorage()
+      }
       next()
     }
-  } catch (error) {
-    console.error('路由守卫错误:', error)
-    next('/home')  // 发生错误时默认跳转到首页
+  } else {
+    next()
   }
 })
 

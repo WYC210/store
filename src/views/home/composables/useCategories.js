@@ -16,16 +16,19 @@ export function useCategories() {
     }
   }
 
+  // 获取顶级分类
+  const categories = computed(() => {
+    return categoryStore.categories.filter(category => !category.parentId)
+  })
+
   const handleCategoryClick = (category) => {
     activeCategory.value = category
   }
 
   const handleSubCategoryClick = (subCategory) => {
     // 处理子分类点击
+    console.log('子分类点击:', subCategory)
   }
-
-  // 使用 computed 确保返回的始终是数组
-  const categories = computed(() => categoryStore.categories || [])
 
   return {
     categories,

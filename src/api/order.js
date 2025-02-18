@@ -4,12 +4,18 @@ import request from '@/utils/request'
 export const createOrder = async (orderData) => {
   console.log('发送创建订单请求:', orderData)
   const response = await request({
-    url: '/orders/create',
+    url: '/orders/purchase/direct',
     method: 'POST',
     data: orderData
   })
-  console.log('创建订单响应:', response)
-  return response
+
+  // 确保返回的数据结构正确
+  if (response.state === 200) {
+    console.log('创建订单响应:', response)
+    return response.data // 返回订单信息
+  } else {
+    throw new Error(response.message || '创建订单失败')
+  }
 }
 
 // 支付订单
@@ -20,8 +26,14 @@ export const payOrder = async (orderId, paymentData) => {
     method: 'POST',
     data: paymentData
   })
-  console.log('支付订单响应:', response)
-  return response
+
+  // 确保返回的数据结构正确
+  if (response.state === 200) {
+    console.log('支付订单响应:', response)
+    return response
+  } else {
+    throw new Error(response.message || '支付订单失败')
+  }
 }
 
 // 获取订单列表
@@ -41,10 +53,16 @@ export const getOrderDetail = async (orderId) => {
   console.log('发送获取订单详情请求:', orderId)
   const response = await request({
     url: `/orders/${orderId}`,
-    method: 'get'
+    method: 'GET'
   })
-  console.log('获取订单详情响应:', response)
-  return response
+
+  // 确保返回的数据结构正确
+  if (response.state === 200) {
+    console.log('获取订单详情响应:', response)
+    return response.data // 返回订单详情
+  } else {
+    throw new Error(response.message || '获取订单详情失败')
+  }
 }
 
 // 取消订单
@@ -56,19 +74,37 @@ export const cancelOrder = (orderId) => {
 }
 
 // 直接购买商品
-export const purchaseDirectly = (orderData) => {
-  return request({
-    url: '/cart/purchase',
+export const purchaseDirectly = async (productId, quantity) => {
+  console.log('发送直接购买请求:', { productId, quantity });
+  const response = await request({
+    url: '/orders/create/direct',
     method: 'POST',
-    data: orderData
-  })
+    data: {
+      items: {
+        productId: String(productId), // 确保是字符串类型
+        quantity: quantity
+      }
+    }
+  });
+
+  // 输出完整的响应内容
+  console.log("直接购买响应:", response);
+
+  // 检查响应状态
+  if (response.state === 200) { // 这里需要根据后端返回的状态进行判断
+    return response.data; // 返回订单数据
+  } else {
+    throw new Error(response.message || '创建订单失败'); // 抛出错误
+  }
 }
 
+// 导出所有 API 函数
 const orderApi = {
   createOrder,
   payOrder,
   getOrderList,
-  getOrderDetail
+  getOrderDetail,
+  purchaseDirectly
 }
 
 export default orderApi 

@@ -1,11 +1,10 @@
 import request from '@/utils/request'
 
-// 获取商品列表（支持筛选和排序）
+// 获取商品列表
 export const getProducts = async (params = {}) => {
   const {
     pageNum = 1,
     pageSize = 10,
-    categoryId,
     keyword,
   } = params
 
@@ -15,7 +14,6 @@ export const getProducts = async (params = {}) => {
     params: {
       pageNum,
       pageSize,
-      categoryId,
       keyword,
     }
   })
@@ -26,20 +24,10 @@ export const getProductDetail = async (id) => {
   if (!id) {
     throw new Error('商品ID不能为空')
   }
-  console.log('发送商品详情请求，ID:', id); // 添加日志
-  const response = await request({
-    url: '/products/' + id,
+  return request({
+    url: `/products/${id}`,
     method: 'get'
-  });
-
-  // 假设后端返回的图片路径是相对路径，我们需要将其转换为绝对路径
-  if (response.data && response.data.images) {
-    response.data.images = response.data.images.map(image => {
-      return `http://localhost:8088/products/images/${image}`; // 更新为正确的路径
-    });
-  }
-
-  return response;
+  })
 }
 
 // 添加到购物车

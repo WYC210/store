@@ -58,15 +58,24 @@ export const useOrderStore = defineStore('order', {
       this.loading = true
       this.error = null
       try {
+        // 确保 orderId 是字符串
+        const orderId = this.currentOrder.orderId
         const paymentData = {
-          orderId: this.currentOrder.orderId,
           paymentId
         }
-        const response = await payOrder(paymentData)
-        if (response.success) {
+        
+        console.log('支付订单:', { orderId, paymentData })
+        const response = await payOrder(orderId, paymentData)
+        
+        if (response.state === 200) {
+          // 支付成功后更新订单状态
+          this.updateOrderStatus(orderId, 'PAID')
+          // 清除当前订单
+          this.clearCurrentOrder()
+          // 返回成功响应
           return response
         } else {
-          throw new Error(response.error?.message || '支付失败')
+          throw new Error(response.message || '支付失败')
         }
       } catch (error) {
         this.error = error.response?.data?.error || { message: '支付处理失败' }
@@ -124,6 +133,14 @@ export const useOrderStore = defineStore('order', {
       } finally {
         this.loading = false
       }
+    },
+
+    setCurrentOrder(order) {
+      this.currentOrder = order;
+    },
+
+    clearCurrentOrder() {
+      this.currentOrder = null;
     }
   }
 }) 

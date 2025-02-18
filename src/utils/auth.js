@@ -1,4 +1,6 @@
 import request from './request'
+import { setCookie, removeCookie } from '@/utils/cookie'
+import router from '@/router'
 
 // 安全相关配置
 const SECURITY_CONFIG = {
@@ -7,14 +9,14 @@ const SECURITY_CONFIG = {
   lockoutTime: 15 * 60 * 1000 // 锁定时间 15 分钟
 }
 
-// 登录时添加安全检查
+// 登录
 export const login = async (credentials) => {
   try {
     const response = await request({
-      url: '/users/login',
-      method: 'post',
+      url: '/auth/login',
+      method: 'POST',
       data: credentials,
-      withCredentials: true  // 确保接收和发送 cookie
+      withCredentials: true
     })
     return response
   } catch (error) {
@@ -63,7 +65,43 @@ export const getUserInfo = async () => {
 }
 
 // 登出
-export const logout = () => {
-  localStorage.removeItem('token')
-  router.push('/login')
+export const logout = async () => {
+  try {
+    await request({
+      url: '/auth/logout',
+      method: 'POST',
+      withCredentials: true
+    })
+  } catch (error) {
+    console.error('登出请求失败:', error)
+  } finally {
+    // 无论登出请求是否成功，都清除本地状态
+    removeCookie('token')
+    localStorage.removeItem('userInfo')
+    router.push('/login')
+  }
+}
+
+// 刷新 token
+export const refreshToken = async () => {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken')
+    const response = await request({
+      url: '/auth/refresh',
+      method: 'POST',
+      data: { refreshToken },
+      withCredentials: true
+    })
+    
+    if (response.state === 200) {
+      const { accessToken, refreshToken } = response.data
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('refreshToken', refreshToken)
+      return { accessToken, refreshToken }
+    }
+    throw new Error(response.message || '刷新 token 失败')
+  } catch (error) {
+    console.error('刷新 token 失败:', error)
+    throw error
+  }
 } 

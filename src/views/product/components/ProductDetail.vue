@@ -104,7 +104,7 @@ import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ShoppingCart, Picture } from "@element-plus/icons-vue";
 import { getProductDetail, addToCart } from "@/api/product";
-import { createOrder } from "@/api/order";
+import orderApi from "@/api/order";
 import { useUserStore } from "@/stores/user";
 import { useOrderStore } from "@/stores/order";
 import { useCategoryStore } from "@/stores/category";
@@ -231,41 +231,51 @@ const handleAddToCart = async () => {
 // 立即购买
 const handleBuyNow = async () => {
   try {
-    // 准备订单数据
-    const orderData = {
-      productId: String(productId),
-      quantity: quantity.value,
-      price: product.value.price.toFixed(2),
-      productName: product.value.name,
-      imageUrl: product.value.images[0]
+    // 检查登录状态
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning("请先登录");
+      router.push({
+        path: "/login",
+        query: { redirect: route.fullPath },
+      });
+      return;
     }
 
-    console.log('发送立即购买请求:', orderData)
-    const response = await cartApi.purchaseDirectly(orderData)
-    console.log('立即购买响应:', response)
+    if (!product.value?.stock) {
+      ElMessage.warning("商品暂时无货");
+      return;
+    }
 
-    if (response.state === 200) {
-      const { orderId, totalAmount } = response.data
+    console.log("发送立即购买请求参数:", {
+      productId: String(productId),
+      quantity: quantity.value
+    });
+    
+    const response = await orderApi.purchaseDirectly(productId, quantity.value);
+    
+    // 输出完整的响应内容
+    console.log("立即购买完整响应:", response);
+
+    if (response) {
+      // 提取所需信息
+      const { orderId, totalAmount } = response;
+
       // 保存订单信息到 store
-      const orderStore = useOrderStore()
-      orderStore.currentOrder = {
+      orderStore.setCurrentOrder({
         orderId,
         totalAmount,
-        items: [{
-          productId: String(productId),
-          quantity: quantity.value,
-          price: product.value.price,
-          productName: product.value.name,
-          imageUrl: product.value.images[0]
-        }]
-      }
-      router.push(`/payment/${orderId}/${totalAmount}`)
+        productName: product.value.name, // 从 product 中获取
+        productImage: product.value.images[0] || product.value.imageUrl // 从 product 中获取
+      });
+
+      // 跳转到支付页面
+      router.push(`/payment/${orderId}/${totalAmount}`);
     }
   } catch (error) {
-    console.error('立即购买失败:', error)
-    ElMessage.error('购买失败，请重试')
+    console.error("立即购买失败:", error);
+    ElMessage.error(error.message || "购买失败，请重试");
   }
-}
+};
 
 // 处理图片加载错误
 const handleImageError = () => {

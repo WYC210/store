@@ -51,56 +51,51 @@ import { useOrderStore } from "@/stores/order";
 
 const route = useRoute();
 const router = useRouter();
+const orderStore = useOrderStore();
 const loading = ref(false);
 const paymentLoading = ref(false);
 
-// 从路由参数中获取订单信息
-const orderId = ref(route.params.orderId);
-const totalAmount = ref(route.params.totalAmount);
-const checkoutStore = useCheckoutStore();
-const productDetails = ref(checkoutStore.checkoutItems);
+// 从路由参数和 store 中获取订单信息
+const orderId = route.params.orderId;
+const totalAmount = route.params.totalAmount;
+const orderInfo = ref(orderStore.currentOrder);
+const productDetails = ref([]); // 添加商品详情列表
 
 // 添加调试信息
-console.log("支付页面路由参数:", {
-  orderId: orderId.value,
-  totalAmount: totalAmount.value,
+console.log("支付页面信息:", {
+  routeParams: {
+    orderId: orderId,
+    totalAmount: totalAmount,
+  },
+  orderInfo: orderInfo.value,
 });
 
-// 如果没有订单信息，跳转回购物车
+// 验证订单信息
 onMounted(() => {
-  if (!orderId.value || !totalAmount.value) {
+  if (!orderId || !totalAmount || !orderInfo.value) {
     ElMessage.error("订单信息不完整");
     router.push("/cart");
+    return;
   }
+
+  // 显示订单详情
+  productDetails.value = orderInfo.value.items || [];
 });
 
 const handlePayment = async () => {
-  paymentLoading.value = true;
   try {
-    const paymentData = {
-      orderId: orderId.value,
-      amount: totalAmount.value,
-    };
-    const response = await orderApi.payOrder(orderId.value, paymentData);
-    console.log("支付响应:", response);
+    const paymentId = generatePaymentId()
+    const response = await orderStore.payCurrentOrder(paymentId)
+    
     if (response.state === 200) {
-      // 更新订单状态
-      const orderStore = useOrderStore();
-      console.log("准备更新订单状态");
-      await orderStore.updateOrderStatus(orderId.value, "PAID");
-      // 重新获取订单列表以确保数据同步
-      await orderStore.fetchOrderList();
-      ElMessage.success("支付成功！");
+      ElMessage.success('支付成功！')
       // 支付成功后跳转到订单列表页面
-      router.push("/profile/orders");
+      router.push('/profile/orders')
     }
   } catch (error) {
-    console.error("支付失败:", error);
-    ElMessage.error("支付失败，请重试");
-  } finally {
-    paymentLoading.value = false;
+    ElMessage.error(error.message || '支付失败')
   }
-};
+}
 
 const cancelPayment = () => {
   ElMessage.warning("取消支付");

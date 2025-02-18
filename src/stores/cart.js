@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import { getCartItems, updateCartItem, removeFromCart } from '@/api/cart'
+import { getCartItems, updateCartItem, removeFromCart, addToCart } from '@/api/cart'
+import { ref } from 'vue'
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    cartItems: [],
+    cartItems: ref([]),
     totalCount: 0,
     loading: false,
     error: null
@@ -73,6 +74,25 @@ export const useCartStore = defineStore('cart', {
 
     clearCart() {
       this.cartItems = []
+    },
+
+    async addItemToCart(cartData) {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await addToCart(cartData)
+        // 将返回的商品信息添加到 cartItems
+        this.cartItems.push(response) // 确保将商品信息添加到购物车
+      } catch (error) {
+        this.error = error.message || '添加商品到购物车失败'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    setCartItems(items) {
+      this.cartItems = items;
     }
   }
 }) 
