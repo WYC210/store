@@ -135,8 +135,15 @@ const fetchCartData = async () => {
     const cartItems = await cartApi.getCartItems();
     console.log("购物车商品列表:", cartItems);
 
+    // 检查购物车数据是否为 null 或空数组
+    if (cartItems === null || (Array.isArray(cartItems) && cartItems.length === 0)) {
+      ElMessage.info("您的购物车是空的，请添加商品。");
+      cartStore.setCartItems([]); // 确保状态管理中的购物车项为空
+      return; // 直接返回，不再继续处理
+    }
+
     // 验证购物车数据格式
-    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    if (!Array.isArray(cartItems)) {
       throw new Error("购物车数据格式错误");
     }
 
