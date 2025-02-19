@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkstore"]=self["webpackChunkstore"]||[]).push([[357],{3357:function(n,r,t){t.r(r),t.d(r,{default:function(){return l}});var u=t(6768);const e={class:"product-list"};function s(n,r){return(0,u.uX)(),(0,u.CE)("div",e,r[0]||(r[0]=[(0,u.Lk)("h2",null,"商品列表",-1)]))}var c=t(1241);const o={},a=(0,c.A)(o,[["render",s]]);var l=a}}]);
+//# sourceMappingURL=357.617afec9.js.map

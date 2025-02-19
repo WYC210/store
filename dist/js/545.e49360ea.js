@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkstore"]=self["webpackChunkstore"]||[]).push([[545],{4545:function(n,r,t){t.r(r),t.d(r,{default:function(){return d}});var u=t(6768);const e={class:"add-product"};function s(n,r){return(0,u.uX)(),(0,u.CE)("div",e,r[0]||(r[0]=[(0,u.Lk)("h2",null,"添加商品",-1)]))}var c=t(1241);const a={},o=(0,c.A)(a,[["render",s]]);var d=o}}]);
+//# sourceMappingURL=545.e49360ea.js.map
