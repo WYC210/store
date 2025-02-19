@@ -17,37 +17,46 @@ export function useProducts() {
   const productParams = reactive({
     pageNum: 1,
     pageSize: 10,
-    keyword: ''
+    keyword: '',
+    categoryId: null,  // 添加分类ID
+    sortField: 'default',  // 添加排序字段
+    sortOrder: 'desc'  // 添加排序顺序
   })
 
   const fetchProducts = async () => {
     loading.value = true
     try {
       const response = await getProducts(productParams)
-      console.log('商品列表响应:', response)
+      console.log('获取商品响应:', response)
       
-      // 直接使用返回的数据结构
-      if (response && response.list) {
-        // 处理商品数据
+      if (response && Array.isArray(response.list)) {
+        // 处理商品数据，确保所有必要字段都存在
         products.value = response.list.map(product => ({
           ...product,
-          // 确保图片路径正确
-          imageUrl: product.imageUrl.startsWith('http') 
-            ? product.imageUrl 
-            : `http://localhost:8088${product.imageUrl}`,
-          // 确保数值类型正确
-          price: Number(product.price),
-          rating: Number(product.rating),
-          reviewCount: Number(product.reviewCount),
-          stock: Number(product.stock)
+          productId: product.productId || product.id,
+          name: product.name || '未命名商品',
+          description: product.description || '暂无描述',
+          price: Number(product.price) || 0,
+          rating: Number(product.rating) || 0,
+          reviewCount: Number(product.reviewCount) || 0,
+          stock: Number(product.stock) || 0,
+          createdTime: product.createdTime || new Date().toISOString(),
+          imageUrl: product.imageUrl ? (
+            product.imageUrl.startsWith('http') 
+              ? product.imageUrl 
+              : `http://localhost:8088${product.imageUrl}`
+          ) : require('@/assets/cs.png')
         }))
         
         // 更新分页信息
-        pagination.total = response.total
-        pagination.currentPage = response.pageNum
-        pagination.pageSize = response.pageSize
+        pagination.total = response.total || 0
+        pagination.currentPage = response.pageNum || 1
+        pagination.pageSize = response.pageSize || 10
+        
+        console.log('处理后的商品数据:', products.value)
       } else {
-        throw new Error('获取商品列表失败')
+        console.error('返回的数据格式不正确:', response)
+        throw new Error('获取商品列表失败：数据格式不正确')
       }
     } catch (error) {
       console.error('获取商品列表失败:', error)
@@ -67,7 +76,7 @@ export function useProducts() {
   // 处理每页数量变化
   const handleSizeChange = (newSize) => {
     productParams.pageSize = newSize
-    productParams.pageNum = 1 // 重置到第一页
+    productParams.pageNum = 1
     fetchProducts()
   }
 

@@ -2,21 +2,42 @@ import request from '@/utils/request'
 
 // 获取商品列表
 export const getProducts = async (params = {}) => {
+  console.log('API请求参数:', params)
   const {
     pageNum = 1,
     pageSize = 10,
-    keyword,
+    keyword = '',
+    categoryId = null,
+    sortField = 'default',
+    sortOrder = 'desc'
   } = params
 
-  return request({
-    url: '/products',
-    method: 'get',
-    params: {
-      pageNum,
-      pageSize,
-      keyword,
+  try {
+    const response = await request({
+      url: '/products',
+      method: 'get',
+      params: {
+        pageNum,
+        pageSize,
+        keyword,
+        categoryId,
+        sortField,
+        sortOrder
+      }
+    })
+    
+    console.log('API响应:', response)
+    
+    // 确保响应数据格式正确
+    if (response && response.list) {
+      return response
+    } else {
+      throw new Error('返回的数据格式不正确')
     }
-  })
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+    throw error
+  }
 }
 
 // 获取商品详情

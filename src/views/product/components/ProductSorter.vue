@@ -10,7 +10,9 @@
         :key="option.value" 
         :label="option.value"
       >
-        <el-icon v-if="option.icon"><component :is="option.icon" /></el-icon>
+        <el-icon v-if="option.icon">
+          <component :is="getIcon(option.icon)" />
+        </el-icon>
         {{ option.label }}
       </el-radio-button>
     </el-radio-group>
@@ -18,16 +20,18 @@
     <div class="view-mode">
       <el-tooltip content="网格视图" placement="top">
         <el-button 
-          :type="viewMode === 'grid' ? 'primary' : 'default'"
+          :type="currentView === 'grid' ? 'primary' : 'default'"
           @click="toggleViewMode('grid')"
+          class="view-btn"
         >
           <el-icon><Grid /></el-icon>
         </el-button>
       </el-tooltip>
       <el-tooltip content="列表视图" placement="top">
         <el-button 
-          :type="viewMode === 'list' ? 'primary' : 'default'"
+          :type="currentView === 'list' ? 'primary' : 'default'"
           @click="toggleViewMode('list')"
+          class="view-btn"
         >
           <el-icon><List /></el-icon>
         </el-button>
@@ -38,33 +42,51 @@
 
 <script setup>
 import { ref } from 'vue'
-import { 
-  Grid, 
-  List, 
-  Sort, 
-  Timer, 
-  StarFilled, 
-  Sell 
-} from '@element-plus/icons-vue'
+import { Grid, List, Timer, StarFilled, Sell, SortUp, SortDown } from '@element-plus/icons-vue'
+import { useProductSort } from '../composables/useProductSort'
+
+// 定义 props 和 emits
+const props = defineProps({
+  products: {
+    type: Array,
+    default: () => []
+  },
+  currentView: {
+    type: String,
+    default: 'grid'
+  }
+})
 
 const emit = defineEmits(['sort-change', 'view-change'])
 
-const sortOptions = [
-  { label: '综合排序', value: 'default', icon: Sort },
-  { label: '最新上架', value: 'newest', icon: Timer },
-  { label: '评分最高', value: 'rating', icon: StarFilled },
-  { label: '销量优先', value: 'sales', icon: Sell }
-]
+// 使用排序 composable
+const { sortOptions } = useProductSort()
 
+// 当前排序方式
 const currentSort = ref('default')
-const viewMode = ref('grid')
 
+// 获取图标组件
+const getIcon = (iconName) => {
+  const icons = {
+    Timer,
+    StarFilled,
+    Sell,
+    SortUp,
+    SortDown
+  }
+  return icons[iconName]
+}
+
+// 处理排序变化
 const handleSortChange = (value) => {
+  console.log('排序方式变化:', value)
+  currentSort.value = value
   emit('sort-change', value)
 }
 
+// 切换视图模式
 const toggleViewMode = (mode) => {
-  viewMode.value = mode
+  console.log('切换视图模式:', mode)
   emit('view-change', mode)
 }
 </script>
