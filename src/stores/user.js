@@ -1,128 +1,96 @@
 import { defineStore } from 'pinia'
-import { login, getUserInfo, logout } from '@/utils/auth'
+import { auth } from '@/utils/auth'
 import router from '@/router'
 import { ElMessage } from 'element-plus'
+import { tokenManager } from '@/utils/tokenManager'
+import { httpClient } from '@/utils/request'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     userInfo: null,
-    _isLoggedIn: false,
+    isLoggedIn: false
   }),
 
-  getters: {
-    isLoggedIn: (state) => state._isLoggedIn
-  },
-
   actions: {
-    setUserInfo(info) {
-      this.userInfo = info
-      this._isLoggedIn = true
-      localStorage.setItem('userInfo', JSON.stringify(info))
-    },
-
-    // 保存 tokens
-    storeTokens(tokens) {
-      const { accessToken, refreshToken } = tokens
-      localStorage.setItem('accessToken', accessToken)
-      localStorage.setItem('refreshToken', refreshToken)
-    },
-
-    // 清除 tokens
-    clearTokens() {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
+    async initializeFromStorage() {
+      const userInfo = localStorage.getItem('userInfo')
+      if (userInfo && userInfo !== 'undefined') {
+        try {
+          this.userInfo = JSON.parse(userInfo)
+          this.isLoggedIn = true
+        } catch (error) {
+          console.error('解析用户信息失败:', error)
+          this.clearUserState()
+        }
+      } else {
+        this.clearUserState()
+      }
     },
 
     async login(credentials) {
       try {
-        const response = await login(credentials)
-        if (response.state === 200 && response.data) {
-          const { accessToken, refreshToken } = response.data
-          if (!accessToken || !refreshToken) {
-            throw new Error(response.message || '登录响应中缺少 token')
+        console.log('Attempting login with credentials:', credentials)
+        const response = await httpClient.post('/users/login', credentials)
+        console.log('Login response:', response)  // 添加日志
+        
+        if (response.state === 200) {
+          // 检查响应数据结构
+          console.log('Login response data:', response.data)
+          
+          // 解构前检查数据是否存在
+          if (!response.data || !response.data.accessToken || !response.data.refreshToken) {
+            console.error('Invalid response data structure:', response.data)
+            throw new Error('登录响应数据格式错误')
+          }
+
+          const { accessToken, refreshToken, userInfo } = response.data
+          
+          // 检查 token 值
+          console.log('Tokens received:', { accessToken, refreshToken })
+          
+          // 保存 token
+          const tokenSet = tokenManager.setTokens(accessToken, refreshToken)
+          if (!tokenSet) {
+            throw new Error('保存令牌失败')
           }
           
-          // 保存 tokens
-          this.storeTokens(response.data)
-          console.log('Tokens saved:', { accessToken, refreshToken })
-
-          // 保存用户信息
-          const userInfo = {
-            username: credentials.username,
-            // 其他用户信息...
-          }
+          // 更新用户状态
+          this.isLoggedIn = true
           this.setUserInfo(userInfo)
-
-          return true
+          
+          console.log('Login successful, tokens set')
+          return response
         }
-        throw new Error(response.message || '登录响应格式错误')
+        
+        throw new Error(response.message || '登录失败')
       } catch (error) {
-        console.error('登录失败:', error)
-        throw new Error(error.response?.data?.message || error.message || '登录失败')
+        console.error('登录失败，详细错误:', error)
+        throw error
       }
-    },
-
-    clearUserState() {
-      this.userInfo = null
-      this._isLoggedIn = false
-      localStorage.removeItem('userInfo')
-      this.clearTokens()
     },
 
     async logout() {
       try {
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (refreshToken) {
-          const response = await logout({ refreshToken })
-          // 使用后端返回的成功消息
-          ElMessage.success(response.message || '登出成功')
-        }
+        await httpClient.post('/auth/logout')
       } catch (error) {
-        console.error('登出请求失败:', error)
-        // 使用后端返回的错误信息
-        ElMessage.error(error.response?.data?.message || '登出失败')
+        console.error('登出失败:', error)
       } finally {
         this.clearUserState()
+        tokenManager.clearTokens()
         router.push('/login')
       }
     },
 
-    // 验证 token 是否有效
-    async validateToken() {
-      try {
-        const accessToken = localStorage.getItem('accessToken')
-        const refreshToken = localStorage.getItem('refreshToken')
-        
-        if (!accessToken || !refreshToken) {
-          return false
-        }
-
-        // 获取用户信息来验证 token
-        const response = await getUserInfo()
-        if (response.state === 200) {
-          this.setUserInfo(response.data)
-          return true
-        }
-        return false
-      } catch (error) {
-        console.error('Token 验证失败:', error)
-        return false
-      }
+    setUserInfo(info) {
+      this.userInfo = info
+      this.isLoggedIn = true
+      localStorage.setItem('userInfo', JSON.stringify(info))
     },
 
-    // 初始化用户状态
-    async initializeFromStorage() {
-      const userInfo = localStorage.getItem('userInfo')
-      const accessToken = localStorage.getItem('accessToken')
-      const refreshToken = localStorage.getItem('refreshToken')
-      
-      if (userInfo && accessToken && refreshToken) {
-        this.userInfo = JSON.parse(userInfo)
-        this._isLoggedIn = true
-        // 不主动验证 token，等待请求时再处理
-        return true
-      }
-      return false
+    clearUserState() {
+      this.userInfo = null
+      this.isLoggedIn = false
+      localStorage.removeItem('userInfo')
     }
   }
 }) 

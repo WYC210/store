@@ -1,54 +1,140 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { getProducts } from '@/api/product'; // 假设有获取产品的 API
+import { productService } from '@/api/product';
+import { errorHandler } from '@/utils/errorHandler';
+import { cacheManager } from '@/utils/cache';
 
 export const useProductStore = defineStore('product', {
   state: () => ({
-    products: ref([]),
-    loading: ref(false),
-    error: ref(null),
+    products: [],
+    currentProduct: null,
+    loading: false,
+    error: null,
+    pagination: {
+      pageNum: 1,
+      pageSize: 10,
+      total: 0
+    },
+    filters: {
+      keyword: '',
+      categoryId: null,
+      sortField: 'default',
+      sortOrder: 'desc'
+    },
+    sort: {}
   }),
 
+  getters: {
+    hasProducts: (state) => state.products.length > 0,
+    getProductById: (state) => (id) => state.products.find(p => p.id === id),
+    filteredProducts: (state) => {
+      // 实现过滤逻辑
+      return state.products;
+    }
+  },
+
   actions: {
+    // 重置状态
+    resetState() {
+      this.products = [];
+      this.currentProduct = null;
+      this.error = null;
+      this.loading = false;
+    },
+
+    // 更新过滤器
+    updateFilters(filters) {
+      this.filters = {
+        ...this.filters,
+        ...filters
+      };
+      return this.fetchProducts();
+    },
+
+    // 更新分页
+    updatePagination(pagination) {
+      this.pagination = {
+        ...this.pagination,
+        ...pagination
+      };
+      return this.fetchProducts();
+    },
+
+    // 获取商品列表
     async fetchProducts() {
       this.loading = true;
       this.error = null;
+
       try {
-        const response = await getProducts();
-        console.log("获取产品响应:", response); // 输出获取产品的响应
-        if (response.state === 200) {
-          this.products = response.data; // 假设返回的数据是产品数组
-          console.log("产品数据:", this.products); // 输出产品数据
-        } else {
-          throw new Error(response.message || '获取产品失败');
+        const cacheKey = `products_${JSON.stringify(this.filters)}_${JSON.stringify(this.pagination)}`;
+        const cachedData = cacheManager.get(cacheKey);
+
+        if (cachedData) {
+          this.products = cachedData.list;
+          this.pagination.total = cachedData.total;
+          return cachedData;
         }
+
+        const response = await productService.getProducts({
+          ...this.filters,
+          ...this.pagination
+        });
+
+        this.products = response.list;
+        this.pagination.total = response.total;
+
+        cacheManager.set(cacheKey, response);
+        return response;
       } catch (error) {
-        this.error = error.message || '获取产品失败';
-        console.error(this.error);
+        const errorInfo = errorHandler.handleApiError(error);
+        this.error = errorInfo.message;
+        throw error;
       } finally {
         this.loading = false;
       }
     },
 
-    sortProducts(criteria) {
-      console.log("排序标准:", criteria); // 输出排序标准
-      switch (criteria) {
-        case 'latest':
-          this.products.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
-          break;
-        case 'highestRating':
-          this.products.sort((a, b) => b.rating - a.rating);
-          break;
-        case 'highestSales':
-          this.products.sort((a, b) => b.reviewCount - a.reviewCount);
-          break;
-        case 'brand':
-          this.products.sort((a, b) => a.brand.localeCompare(b.brand));
-          break;
-        default:
-          break;
+    // 获取商品详情
+    async fetchProductDetail(productId) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const cacheKey = `product_${productId}`;
+        const cachedData = cacheManager.get(cacheKey);
+
+        if (cachedData) {
+          this.currentProduct = cachedData;
+          return cachedData;
+        }
+
+        const data = await productService.getProductDetails(productId);
+        this.currentProduct = data;
+
+        cacheManager.set(cacheKey, data);
+        return data;
+      } catch (error) {
+        const errorInfo = errorHandler.handleApiError(error);
+        this.error = errorInfo.message;
+        throw error;
+      } finally {
+        this.loading = false;
       }
-      console.log("排序后的产品数据:", this.products); // 输出排序后的产品数据
+    },
+
+    // 获取推荐商品
+    async fetchRecommendedProducts(productId) {
+      try {
+        return await productService.getRecommendedProducts(productId);
+      } catch (error) {
+        const errorInfo = errorHandler.handleApiError(error);
+        this.error = errorInfo.message;
+        throw error;
+      }
+    },
+
+    updateSort(sort) {
+      this.sort = sort;
+      return this.fetchProducts();
     }
   }
 }); 

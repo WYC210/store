@@ -70,11 +70,13 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { Picture } from "@element-plus/icons-vue";
 import orderApi from "@/api/order";
 import { useOrderStore } from "@/stores/order";
+import { defineProps } from 'vue'
 
 const props = defineProps({
   orders: {
     type: Array,
     required: true,
+    default: () => []
   },
 });
 
@@ -109,14 +111,23 @@ const getStatusClass = (status) => {
   }
 }
 
-// 监听订单状态变化
+// 优化图片 URL 处理方法
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return "";
+  // 添加默认图片
+  return imageUrl.startsWith("http") ? imageUrl : `/default-product-image.png`;
+}
+
+// 移除多余的监听器，只在需要时使用
 watch(
   () => props.orders,
   (newOrders) => {
-    console.log("订单列表更新:", newOrders);
+    if (newOrders?.length > 0) {
+      console.log('OrderList 收到新的有效订单数据:', newOrders.length)
+    }
   },
-  { deep: true }
-);
+  { immediate: true }
+)
 
 const handlePay = (order) => {
   router.push(`/payment/${order.orderId}/${order.totalAmount}`);
@@ -142,15 +153,6 @@ const handleCancel = async (order) => {
       ElMessage.error("取消订单失败");
     }
   }
-};
-
-// 添加处理图片 URL 的方法
-const getImageUrl = (imageUrl) => {
-  if (!imageUrl) return "";
-  if (imageUrl.startsWith("http")) {
-    return imageUrl;
-  }
-  return `http://localhost:8088/${imageUrl}`;
 };
 </script>
 

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getCategories } from '@/api/category'
+import { categoryService } from '@/api/category'
 
 export const useCategoryStore = defineStore('category', {
   state: () => ({
@@ -17,32 +17,26 @@ export const useCategoryStore = defineStore('category', {
     // 获取指定父分类的子分类
     getChildCategories: (state) => (parentId) => {
       return state.categories.filter(category => category.parentCategoryId === parentId)
-    }
+    },
+
+    // 根据分类ID获取分类信息
+    getCategoryById: (state) => (categoryId) =>
+      state.categories.find(category => category.categoryId === categoryId)
   },
 
   actions: {
     async fetchCategories() {
       this.loading = true
-      this.error = null
       try {
-        const response = await getCategories()
-        if (response.state === 200) {
-          this.categories = response.data
-        } else {
-          throw new Error(response.message || '获取分类失败')
-        }
-        return response.data
+        const { data } = await categoryService.getCategories()
+        this.categories = data
+        return data
       } catch (error) {
-        this.error = error.message || '获取分类失败'
+        this.error = error.message
         throw error
       } finally {
         this.loading = false
       }
-    },
-
-    // 根据分类ID获取分类信息
-    getCategoryById(categoryId) {
-      return this.categories.find(category => category.categoryId === categoryId)
     },
 
     // 获取分类的完整路径

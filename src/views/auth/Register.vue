@@ -114,6 +114,7 @@ const rules = {
 }
 
 const handleRegister = async () => {
+  console.log('准备发送注册请求...')
   if (!registerFormRef.value) return
   
   try {
@@ -128,6 +129,8 @@ const handleRegister = async () => {
       password: formData.value.password
     })
 
+    console.log('注册成功:', response)
+    
     // 注册成功
     if (response.state === 200) {
       ElMessage.success('注册成功')
@@ -137,7 +140,7 @@ const handleRegister = async () => {
     }
     
   } catch (error) {
-    console.error('Register error:', error)
+    console.error('注册错误:', error)
     ElMessage.error(error.message || '注册失败')
   } finally {
     loading.value = false

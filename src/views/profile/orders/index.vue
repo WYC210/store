@@ -31,50 +31,43 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { HomeFilled } from '@element-plus/icons-vue'
-import orderApi from '@/api/order'
 import { useOrderStore } from '@/stores/order'
 import OrderList from './components/OrderList.vue'
 
 const router = useRouter()
 const orderStore = useOrderStore()
 const activeTab = ref('all')
-const orders = ref([])
 const loading = ref(false)
 
-// 根据标签筛选订单
+// 移除 orders ref，直接使用 store 中的数据
+const orders = computed(() => orderStore.orderList)
+
+// 简化计算属性，直接使用 computed orders
 const filteredOrders = computed(() => {
+  console.log('过滤订单，当前标签:', activeTab.value, '订单数量:', orders.value.length)
+  
   switch (activeTab.value) {
     case 'unpaid':
-      return orders.value.filter(order => !order.isPaid)
+      return orders.value.filter(order => order.status === 'PENDING_PAY')
     case 'paid':
-      return orders.value.filter(order => order.isPaid)
+      return orders.value.filter(order => order.status === 'PAID')
     default:
       return orders.value
   }
 })
 
-// 获取订单列表
+// 简化获取订单列表的方法
 const fetchOrders = async () => {
   loading.value = true
   try {
-    const response = await orderApi.getOrderList()
-    if (response.state === 200) {
-      orders.value = response.data
-      // 同步到 store
-      orderStore.orderList = response.data
-    }
+    await orderStore.fetchOrderList()
   } catch (error) {
     console.error('获取订单列表失败:', error)
-    ElMessage.error('获取订单列表失败')
+    ElMessage.error('获取订单列表失败：' + error.message)
   } finally {
     loading.value = false
   }
 }
-
-// 监听 orderStore 中的订单列表变化
-watch(() => orderStore.orderList, (newOrderList) => {
-  orders.value = newOrderList
-}, { deep: true })
 
 const handleTabClick = () => {
   // 可以在这里添加额外的处理逻辑

@@ -2,16 +2,26 @@ import { defineStore } from 'pinia'
 
 export const useCheckoutStore = defineStore('checkout', {
   state: () => ({
-    checkoutItems: []
+    orderData: null,
+    loading: false,
+    error: null
   }),
   
+  getters: {
+    orderId: (state) => state.orderData?.orderId,
+    totalAmount: (state) => state.orderData?.totalAmount,
+    orderItems: (state) => state.orderData?.items || [],
+    orderStatus: (state) => state.orderData?.status
+  },
+  
   actions: {
-    setCheckoutItems(items) {
-      this.checkoutItems = items
+    setOrderData(orderData) {
+      this.orderData = orderData
     },
     
-    clearCheckoutItems() {
-      this.checkoutItems = []
+    clearOrderData() {
+      this.orderData = null
+      this.error = null
     }
   }
 }) 

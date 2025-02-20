@@ -45,61 +45,78 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import orderApi from "@/api/order";
-import { generatePaymentId } from "@/utils/payment";
+import { paymentService } from '@/utils/payment'
 import { useCheckoutStore } from "@/stores/checkout";
 import { useOrderStore } from "@/stores/order";
 
 const route = useRoute();
 const router = useRouter();
 const orderStore = useOrderStore();
+const checkoutStore = useCheckoutStore(); // 添加 checkout store
 const loading = ref(false);
 const paymentLoading = ref(false);
 
 // 从路由参数和 store 中获取订单信息
 const orderId = route.params.orderId;
 const totalAmount = route.params.totalAmount;
-const orderInfo = ref(orderStore.currentOrder);
-const productDetails = ref([]); // 添加商品详情列表
+const orderData = checkoutStore.orderData; // 从 checkout store 获取数据
+const productDetails = ref([]); 
 
 // 添加调试信息
 console.log("支付页面信息:", {
-  routeParams: {
-    orderId: orderId,
-    totalAmount: totalAmount,
-  },
-  orderInfo: orderInfo.value,
+  routeParams: { orderId, totalAmount },
+  orderData,
+  checkoutStore
 });
 
 // 验证订单信息
 onMounted(() => {
-  if (!orderId || !totalAmount || !orderInfo.value) {
+  if (!orderData) {
     ElMessage.error("订单信息不完整");
     router.push("/cart");
     return;
   }
 
   // 显示订单详情
-  productDetails.value = orderInfo.value.items || [];
+  productDetails.value = orderData.items || [];
 });
 
 const handlePayment = async () => {
+  paymentLoading.value = true;
   try {
-    const paymentId = generatePaymentId()
-    const response = await orderStore.payCurrentOrder(paymentId)
+    const paymentData = {
+      orderId: orderId,
+      amount: totalAmount,
+      paymentMethod: 'online',
+      paymentId: paymentService.generatePaymentId()
+    };
     
-    if (response.state === 200) {
-      ElMessage.success('支付成功！')
-      // 支付成功后跳转到订单列表页面
-      router.push('/profile/orders')
+    console.log('发起支付请求:', paymentData);
+    
+    const response = await orderStore.payCurrentOrder(paymentData);
+    console.log('支付响应:', response);
+    
+    // 修改判断条件，检查 response 本身是否为 true
+    if (response === true || response?.state === 200) {
+      ElMessage.success('支付成功！');
+      // 清除 checkout store 数据
+      checkoutStore.clearOrderData();
+      router.push('/orders');
+    } else {
+      throw new Error(response?.message || '支付失败');
     }
   } catch (error) {
-    ElMessage.error(error.message || '支付失败')
+    console.error('支付错误:', error);
+    ElMessage.error(error.message || '支付失败');
+  } finally {
+    paymentLoading.value = false;
   }
-}
+};
 
 const cancelPayment = () => {
   ElMessage.warning("取消支付");
-  router.push("/profile/orders");
+  checkoutStore.clearOrderData(); // 清除订单数据
+  router.push("/orders");
 };
 </script>
 

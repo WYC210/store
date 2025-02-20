@@ -12,6 +12,7 @@ import { useOrderStore } from "@/stores/order";
 import { useCategoryStore } from "@/stores/category";
 import { useTheme } from "./views/home/composables/useTheme";
 
+
 const animationManager = provideAnimationManager();
 const userStore = useUserStore();
 const orderStore = useOrderStore();

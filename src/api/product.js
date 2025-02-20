@@ -1,55 +1,94 @@
-import request from '@/utils/request'
+import { BaseApiService } from './base'
+import { httpClient } from '@/utils/request'
 
-// 获取商品列表
-export const getProducts = async (params = {}) => {
-  console.log('API请求参数:', params)
-  const {
-    pageNum = 1,
-    pageSize = 10,
-    keyword = '',
-    categoryId = null,
-    sortField = 'default',
-    sortOrder = 'desc'
-  } = params
+class ProductService extends BaseApiService {
+  constructor() {
+    super('/products')
+  }
 
-  try {
-    const response = await request({
-      url: '/products',
-      method: 'get',
+  // 获取商品列表
+  async getProducts(params = {}) {
+    const defaultParams = {
+      pageNum: 1,
+      pageSize: 10,
+      keyword: '',
+      categoryId: null,
+      sortField: 'default',
+      sortOrder: 'desc'
+    }
+
+    return this.getAll({ ...defaultParams, ...params })
+  }
+
+  // 获取商品详情
+  async getProductDetail(productId) {
+    return this.getById(productId)
+  }
+
+  // 获取商品详细信息
+  async getProductDetails(productId) {
+    if (!productId) {
+      throw new Error('商品ID不能为空')
+    }
+
+    return this.request({
+      url: this.getUrl(`/${productId}/details`),
+      method: 'GET',
       params: {
-        pageNum,
-        pageSize,
-        keyword,
-        categoryId,
-        sortField,
-        sortOrder
+        includeOptions: true,
+        includeComments: true
       }
     })
-    
-    console.log('API响应:', response)
-    
-    // 确保响应数据格式正确
-    if (response && response.list) {
-      return response
-    } else {
-      throw new Error('返回的数据格式不正确')
+  }
+
+  // 获取商品图片
+  async getProductImages(productId, limit = 5) {
+    if (!productId) {
+      throw new Error('商品ID不能为空')
     }
-  } catch (error) {
-    console.error('获取商品列表失败:', error)
-    throw error
+
+    return this.request({
+      url: this.getUrl(`/${productId}/images`),
+      method: 'GET',
+      params: { limit }
+    })
+  }
+
+  // 获取最新评论
+  async getLatestComments(productId, limit = 5) {
+    if (!productId) {
+      throw new Error('商品ID不能为空')
+    }
+
+    return this.request({
+      url: this.getUrl(`/${productId}/comments/latest`),
+      method: 'GET',
+      params: {
+        limit,
+        sort: 'createdTime,desc'
+      }
+    })
+  }
+
+  // 搜索商品
+  async searchProducts(keyword, options = {}) {
+    return this.getAll({
+      keyword,
+      ...options
+    })
+  }
+
+  // 获取推荐商品
+  async getRecommendedProducts(productId, limit = 5) {
+    return this.request({
+      url: this.getUrl(`/${productId}/recommendations`),
+      method: 'GET',
+      params: { limit }
+    })
   }
 }
 
-// 获取商品详情
-export const getProductDetail = async (id) => {
-  if (!id) {
-    throw new Error('商品ID不能为空')
-  }
-  return request({
-    url: `/products/${id}`,
-    method: 'get'
-  })
-}
+export const productService = new ProductService()
 
 // 添加到购物车
 export const addToCart = async (cartData) => {
@@ -71,67 +110,6 @@ export const getCategories = async () => {
   })
 }
 
-// 获取商品详细信息（包含配置选项和评论）
-export const getProductDetails = async (productId) => {
-  if (!productId) {
-    throw new Error('商品ID不能为空')
-  }
-  return request({
-    url: `/products/${productId}/details`,
-    method: 'get',
-    params: {
-      includeOptions: true,  // 包含配置选项
-      includeComments: true  // 包含评论
-    }
-  })
-}
-
-// 获取商品图片列表
-export const getProductImages = async (productId) => {
-  if (!productId) {
-    throw new Error('商品ID不能为空')
-  }
-  return request({
-    url: `/products/${productId}/images`,
-    method: 'get',
-    params: {
-      limit: 5  // 限制图片数量
-    }
-  })
-}
-
-// 获取最新评论（用于弹幕）
-export const getLatestComments = async (productId, limit = 5) => {
-  if (!productId) {
-    throw new Error('商品ID不能为空')
-  }
-  return request({
-    url: `/products/${productId}/comments/latest`,
-    method: 'get',
-    params: { 
-      limit,
-      sort: 'createdTime,desc'  // 按时间倒序
-    }
-  })
-}
-
-// 批量获取商品信息
-export const batchGetProducts = async (productIds) => {
-  if (!Array.isArray(productIds) || !productIds.length) {
-    return []
-  }
-  
-  try {
-    const results = await Promise.allSettled(
-      productIds.map(id => getProductDetail(id))
-    )
-    
-    return results
-      .filter(result => result.status === 'fulfilled')
-      .map(result => result.value?.data)
-      .filter(Boolean)
-  } catch (error) {
-    console.error('批量获取商品信息失败:', error)
-    return []
-  }
+export const getProducts = async (params) => {
+  return await httpClient.get('/products', { params })
 } 

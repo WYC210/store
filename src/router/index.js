@@ -27,7 +27,10 @@ const routes = [
     path: '/cart',
     name: 'Cart',
     component: Cart,
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: true,
+      title: '购物车'
+    }
   },
   {
     path: '/login',
@@ -174,16 +177,25 @@ router.beforeEach(async (to, from, next) => {
     const refreshToken = localStorage.getItem('refreshToken')
 
     if (!accessToken || !refreshToken) {
+      ElMessage.warning('请先登录')
       next({
         path: '/login',
         query: { redirect: to.fullPath }
       })
-    } else {
-      // 已经登录，直接放行
+      return
+    }
+
+    try {
       if (!userStore.isLoggedIn) {
         await userStore.initializeFromStorage()
       }
       next()
+    } catch (error) {
+      console.error('验证用户状态失败:', error)
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
     }
   } else {
     next()

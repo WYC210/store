@@ -1,5 +1,8 @@
 <template>
   <div class="product-detail" v-if="product">
+    <!-- 返回主页按钮 -->
+    <el-button type="primary" @click="goBack">返回商城主页</el-button>
+    
     <!-- 商品图片展示区 -->
     <div class="product-gallery">
       <el-image
@@ -103,12 +106,15 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ShoppingCart, Picture } from "@element-plus/icons-vue";
-import { getProductDetail, addToCart } from "@/api/product";
-import orderApi from "@/api/order";
+import { productService } from "@/api/product";
+import { orderService } from "@/api/order";
 import { useUserStore } from "@/stores/user";
 import { useOrderStore } from "@/stores/order";
 import { useCategoryStore } from "@/stores/category";
 import cartApi from "@/api/cart";
+import { tokenManager } from "@/utils/tokenManager";
+import { useCartStore } from '@/stores/cart'
+import { useProductStore } from '@/stores/product'
 
 const route = useRoute();
 const router = useRouter();
@@ -116,6 +122,8 @@ const productId = route.params.id;
 const userStore = useUserStore();
 const orderStore = useOrderStore();
 const categoryStore = useCategoryStore();
+const cartStore = useCartStore()
+const productStore = useProductStore()
 
 console.log("获取到的商品ID:", productId);
 
@@ -169,7 +177,7 @@ const fetchProductDetail = async () => {
     if (!productId) {
       throw new Error("商品ID不存在");
     }
-    const response = await getProductDetail(productId);
+    const response = await productService.getProductDetail(productId);
     console.log("商品详情响应:", response);
 
     if (response) {
@@ -179,7 +187,7 @@ const fetchProductDetail = async () => {
         images: response.data.images.map((image) => {
           // 修复重复的基础URL问题
           return image.replace(
-            /^http:\/\/localhost:8088\/products\/images\/http:\/\/localhost:8088\/products\/images\//,
+            /^http:\/\/localhost\/products\/images\/http:\/\/localhost\/products\/images\//,
             "http://localhost:8088/products/images/"
           );
         }),
@@ -202,31 +210,29 @@ const handleAddToCart = async () => {
   try {
     // 检查登录状态
     if (!userStore.isLoggedIn) {
-      ElMessage.warning("请先登录");
+      ElMessage.warning('请先登录')
       router.push({
-        path: "/login",
-        query: { redirect: route.fullPath },
-      });
-      return;
+        path: '/login',
+        query: { redirect: route.fullPath }
+      })
+      return
     }
 
+    // 检查库存
     if (!product.value?.stock) {
-      ElMessage.warning("商品暂时无货");
-      return;
+      ElMessage.warning('商品暂时无货')
+      return
     }
 
-    const cartData = {
+    await cartStore.addItemToCart({
       productId: productId,
-      quantity: quantity.value,
-    };
-
-    await addToCart(cartData);
-    ElMessage.success("已添加到购物车");
+      quantity: quantity.value
+    })
+    ElMessage.success('添加到购物车成功')
   } catch (error) {
-    console.error("添加到购物车失败:", error);
-    ElMessage.error("添加失败，请重试");
+    ElMessage.error('添加到购物车失败：' + error.message)
   }
-};
+}
 
 // 立即购买
 const handleBuyNow = async () => {
@@ -246,34 +252,54 @@ const handleBuyNow = async () => {
       return;
     }
 
-    console.log("发送立即购买请求参数:", {
-      productId: String(productId),
-      quantity: quantity.value
-    });
+    // 更新请求数据格式，支持多个商品
+    const requestData = {
+      items: [
+        {
+          productId: String(productId),  // 确保 productId 是字符串
+          quantity: quantity.value,
+          price: parseFloat(product.value.price).toFixed(2),  // 确保价格精确到两位小数
+          productName: product.value.name // 假设 product.value 中有商品名称
+        }
+      ]
+    };
+
+    console.log("发送立即购买请求参数:", requestData);
+
+    // 调试输出请求头
+    const token = tokenManager.getAccessToken();
+    console.log("请求头 Authorization:", `Bearer ${token}`);
+
+    // 发送请求
+    const response = await orderService.purchaseDirectly(requestData);  // 传递更新后的请求数据
     
-    const response = await orderApi.purchaseDirectly(productId, quantity.value);
-    
-    // 输出完整的响应内容
     console.log("立即购买完整响应:", response);
 
-    if (response) {
-      // 提取所需信息
-      const { orderId, totalAmount } = response;
-
-      // 保存订单信息到 store
+    if (response.state === 200) {
+      const { orderId, totalAmount } = response.data;
+      
       orderStore.setCurrentOrder({
         orderId,
         totalAmount,
-        productName: product.value.name, // 从 product 中获取
-        productImage: product.value.images[0] || product.value.imageUrl // 从 product 中获取
+        productName: product.value.name,
+        productImage: product.value.images[0] || product.value.imageUrl
       });
 
-      // 跳转到支付页面
       router.push(`/payment/${orderId}/${totalAmount}`);
+    } else {
+      throw new Error(response.message || '购买失败');
     }
   } catch (error) {
     console.error("立即购买失败:", error);
-    ElMessage.error(error.message || "购买失败，请重试");
+    if (error.response?.status === 401) {
+      ElMessage.warning("请先登录");
+      router.push({
+        path: "/login",
+        query: { redirect: route.fullPath },
+      });
+    } else {
+      ElMessage.error(error.message || "购买失败，请重试");
+    }
   }
 };
 
@@ -282,6 +308,11 @@ const handleImageError = () => {
   if (product.value && product.value.images) {
     product.value.images = [errorImage];
   }
+};
+
+// 返回商城主页的函数
+const goBack = () => {
+  router.push({ name: 'Home' }); // 假设你的主页路由名称是 'Home'
 };
 
 onMounted(() => {
