@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkstore"]=self["webpackChunkstore"]||[]).push([[397],{7397:function(r,n,e){e.r(n),e.d(n,{default:function(){return l}});var t=e(6768);const s={class:"order-list"};function u(r,n){return(0,t.uX)(),(0,t.CE)("div",s,n[0]||(n[0]=[(0,t.Lk)("h2",null,"订单列表",-1)]))}var c=e(1241);const o={},a=(0,c.A)(o,[["render",u]]);var l=a}}]);
+//# sourceMappingURL=397.f82188c9.js.map

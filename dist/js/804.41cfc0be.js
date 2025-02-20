@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkstore"]=self["webpackChunkstore"]||[]).push([[804],{4804:function(n,e,r){r.r(e),r.d(e,{default:function(){return l}});var t=r(6768);const u={class:"role-management"};function s(n,e){return(0,t.uX)(),(0,t.CE)("div",u,e[0]||(e[0]=[(0,t.Lk)("h2",null,"角色管理",-1)]))}var a=r(1241);const c={},o=(0,a.A)(c,[["render",s]]);var l=o}}]);
+//# sourceMappingURL=804.41cfc0be.js.map
