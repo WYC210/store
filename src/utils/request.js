@@ -70,9 +70,20 @@ class HttpClient {
           console.log('Response interceptor:', response.data)
           return response.data
         },
-        async error => {
-          console.error('Response error:', error)
-          return Promise.reject(error)
+        error => {
+          // 处理网络错误
+          if (error.response) {
+            // 服务器返回了状态码，但状态码不在 2xx 范围内
+            console.error('Network Error:', error)
+            return Promise.reject(new Error('服务端在摸鱼，快去告状'))
+          } else if (error.request) {
+            // 请求已发出，但没有收到响应
+            console.error('Network Error:', error)
+            return Promise.reject(new Error('服务端在摸鱼，快去告状'))
+          } else {
+            // 其他错误
+            return Promise.reject(new Error('请求配置错误'))
+          }
         }
       )
     }

@@ -8,31 +8,10 @@ class CartService extends BaseApiService {
 
   // 获取购物车列表
   async getCartItems() {
-    try {
-      const response = await this.request(httpClient, {
-        url: this.getUrl('/list'),
-        method: 'GET'
-      })
-      
-      console.log('Cart API Response:', response)
-
-      // 检查响应的完整性
-      if (!response) {
-        console.error('No response received')
-        return { state: 200, data: [] }
-      }
-
-      // 检查响应格式和状态码
-      if (response.state !== 200) {
-        console.error('Invalid response state:', response.state)
-        return { state: response.state, data: [] }
-      }
-
-      return response
-    } catch (error) {
-      console.error('GetCartItems error:', error)
-      throw error
-    }
+    return this.request(httpClient, {
+      url: this.getUrl('/list'),
+      method: 'GET',
+    })
   }
 
   // 添加商品到购物车
