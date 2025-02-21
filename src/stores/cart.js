@@ -31,10 +31,7 @@ export const useCartStore = defineStore('cart', {
       try {
         this.loading = true
         const response = await cartService.getCartItems()
-        console.log('Cart Store Response2333333333333333333333333:', response)
-
-        // 检查响应数据的结构
-        console.log('Response Data:', response?.data); // 添加调试日志
+        console.log('获取购物车数据响应666666666666666666666666666666666666666:', response)
 
         if (response?.state === 200 && Array.isArray(response.data)) {
           this.cartItems = response.data.map(item => ({
@@ -127,8 +124,9 @@ export const useCartStore = defineStore('cart', {
       this.loading = true
       this.error = null
       try {
+        console.log('发送添加到购物车请求:', cartData)
         const response = await cartService.addToCart(cartData)
-        console.log('添加购物车响应:', response) // 调试日志
+        console.log('添加购物车响应:', response)
         
         if (response?.state === 200 && response?.data) {
           const item = response.data
@@ -156,9 +154,9 @@ export const useCartStore = defineStore('cart', {
           throw new Error(response?.message || '添加商品到购物车失败')
         }
       } catch (error) {
+        console.error('添加商品到购物车失败:', error)
         this.error = error.message || '添加商品到购物车失败'
         ElMessage.error(this.error)
-        throw error
       } finally {
         this.loading = false
       }
@@ -181,9 +179,12 @@ export const useCartStore = defineStore('cart', {
         this.loading = true
         ElMessage.info('正在处理结算请求...')
 
+        // 只获取选中商品的 ID
         const cartItemIds = selectedItems.map(item => item.id)
+        console.log('发送结算请求的商品ID:', cartItemIds) // 只发送选中的商品 ID
         const response = await cartService.purchaseCart(cartItemIds)
         
+        console.log('结算响应:', response)
         if (response.state === 200) {
           const { orderId, totalAmount } = response.data
           

@@ -41,6 +41,11 @@ class CartService extends BaseApiService {
       throw new Error('商品ID不能为空')
     }
 
+    console.log('发送添加到购物车请求23333333333333333333333333:', {
+      productId: cartData.productId,
+      quantity: cartData.quantity || 1
+    })
+
     return httpClient.request({
       url: this.getUrl('/add'),
       method: 'POST',
@@ -99,9 +104,8 @@ class CartService extends BaseApiService {
       console.log('发送结算请求:', {
         url: '/orders/purchase/cart',
         data: { cartItemIds }
-      });
+      })
 
-      // 直接返回原始响应，不做额外处理
       return await this.request(httpClient, {
         url: '/orders/purchase/cart',
         method: 'POST',
