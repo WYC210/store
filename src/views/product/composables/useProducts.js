@@ -44,7 +44,7 @@ export function useProducts() {
           imageUrl: product.imageUrl ? (
             product.imageUrl.startsWith('http') 
               ? product.imageUrl 
-              : `http://localhost:8088${product.imageUrl}`
+              : `http://localhost:8088/products${product.imageUrl}`
           ) : require('@/assets/cs.png')
         }))
         

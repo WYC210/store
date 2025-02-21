@@ -71,11 +71,15 @@ console.log("支付页面信息:", {
 
 // 验证订单信息
 onMounted(() => {
-  if (!orderData) {
-    ElMessage.error("订单信息不完整");
-    router.push("/cart");
-    return;
-  }
+  console.log("2333333333333333333333333支付页面信息:", {
+    routeParams: { orderId, totalAmount },
+    orderData,
+    checkoutStore
+  })
+  console.log("哇哇哇哇哇哇哇:", {
+    orderData
+  })
+ 
 
   // 显示订单详情
   productDetails.value = orderData.items || [];

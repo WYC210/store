@@ -186,7 +186,7 @@ export const useCartStore = defineStore('cart', {
         
         console.log('结算响应:', response)
         if (response.state === 200) {
-          const { orderId, totalAmount } = response.data
+          const { orderId, totalAmount } = response.data;
           
           // 使用 checkout store 存储订单数据
           const checkoutStore = useCheckoutStore()

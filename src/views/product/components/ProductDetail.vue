@@ -115,6 +115,7 @@ import cartApi from "@/api/cart";
 import { tokenManager } from "@/utils/tokenManager";
 import { useCartStore } from '@/stores/cart'
 import { useProductStore } from '@/stores/product'
+import { useCheckoutStore } from '@/stores/checkout'
 
 const route = useRoute();
 const router = useRouter();
@@ -124,6 +125,7 @@ const orderStore = useOrderStore();
 const categoryStore = useCategoryStore();
 const cartStore = useCartStore()
 const productStore = useProductStore()
+const checkoutStore = useCheckoutStore()
 
 console.log("获取到的商品ID:", productId);
 
@@ -284,6 +286,14 @@ const handleBuyNow = async () => {
         productName: product.value.name,
         productImage: product.value.images[0] || product.value.imageUrl
       });
+
+      const checkoutStore = useCheckoutStore()
+      checkoutStore.setOrderData({
+        orderId,
+        totalAmount,
+        items: requestData.items,
+        orderInfo: response.data
+      })
 
       router.push(`/payment/${orderId}/${totalAmount}`);
     } else {
