@@ -86,7 +86,46 @@ class ProductService extends BaseApiService {
       params: { limit }
     })
   }
+  // 上架商品
+  async createProduct(productData) {
+    // 必填字段校验
+    if (!productData.product_id || !productData.name || 
+        !productData.price || !productData.stock) {
+      throw new Error('缺少必填字段: product_id/name/price/stock')
+  }
+
+  return this.request({
+    url: this.getUrl('/create'), // 指定自定义路径
+    method: 'POST',
+    data: productData
+  })
+  }
+
+  // 更新商品
+  async updateProduct(productId, productData) {
+    if (!productId) throw new Error('商品ID不能为空')
+    
+    return this.request({
+      url: this.getUrl(`/update`), // 或使用 RESTful 风格：url: this.getUrl(`/${productId}`)
+      method: 'PUT',
+      data: {
+        ...productData,
+        product_id: productId // 确保传递ID
+      }
+    })
+  }
+
+  // 下架商品
+  async deactivateProduct(productId) {
+    if (!productId) throw new Error('商品ID不能为空')
+    
+    return this.request({
+      url: this.getUrl(`/deactivate/${productId}`),
+      method: 'PUT'
+    })
+  }
 }
+
 
 export const productService = new ProductService()
 
@@ -109,6 +148,7 @@ export const getCategories = async () => {
     method: 'get',
   })
 }
+
 
 export const getProducts = async (params) => {
   return await httpClient.get('/products', { params })

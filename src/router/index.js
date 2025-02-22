@@ -154,6 +154,13 @@ const routes = [
     component: Payment,
     props: true,
     meta: { requiresAuth: true }
+  },
+  { path: '/productsList',
+  name: 'ProductPage',
+  component: () => import('@/views/product/components/ProductPage.vue'), // 动态导入
+  props: true,
+  meta: { requiresAuth: false } // 根据需要设置是否需要登录
+
   }
 ]
 

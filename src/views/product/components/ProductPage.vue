@@ -1,72 +1,63 @@
 <template>
-  <header class="header" :class="{ 'header-fixed': isScrolled }">
-    <div class="header-content">
-      <!-- Logo -->
-      <router-link to="/home" class="logo">
-        <img src="@/assets/logo_w.png" alt="Logo" />
-      </router-link>
-
-      <!-- 导航菜单 -->
-      <nav class="nav-menu">
-        <router-link to="/home" class="nav-item">首页</router-link>
-        <router-link to="/productsList" class="nav-item">商品</router-link>
-        <router-link to="/cart" class="nav-item">
-          <el-badge
-            :value="cartStore.totalCount"
-            :hidden="!cartStore.totalCount"
-          >
-            <el-icon><ShoppingCart /></el-icon>
-            购物车
-          </el-badge>
+  <div class="product-page">
+    <header class="header">
+      <div class="header-content">
+        <router-link to="/home" class="logo">
+          <img src="@/assets/logo_w.png" alt="Logo" />
         </router-link>
-      </nav>
-
-      <!-- 用户区域 -->
-      <div class="user-area">
-        <template v-if="userStore.isLoggedIn">
-          <UserDropdown />
-        </template>
-        <template v-else>
-          <el-button
-            type="primary"
-            class="login-btn hologram-btn"
-            @click="handleLogin"
-          >
-            登录
-          </el-button>
-        </template>
+        <nav class="nav-menu">
+          <router-link to="/home" class="nav-item">首页</router-link>
+          <router-link to="/products" class="nav-item">商品</router-link>
+          <router-link to="/cart" class="nav-item">
+            <el-badge
+              :value="cartStore.totalCount"
+              :hidden="!cartStore.totalCount"
+            >
+              <el-icon><ShoppingCart /></el-icon>
+              购物车
+            </el-badge>
+          </router-link>
+        </nav>
       </div>
+    </header>
+
+    <div class="filter-section">
+      <ProductFilter @filter-change="applyFilters" />
     </div>
-  </header>
+
+    <div class="product-list-section">
+      <ProductSorter @sort-change="handleSortChange" />
+      <ProductList :products="filteredProducts" />
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
-import { useUserStore } from "@/stores/user";
-import { useCartStore } from "@/stores/cart";
-import { ShoppingCart } from "@element-plus/icons-vue";
-import UserDropdown from "@/components/UserDropdown.vue";
+import { ref, onMounted } from 'vue';
+import { useProductFilter } from '@/views/product/composables/useProductFilter';
+import { useProducts } from '@/views/product/composables/useProducts';
+import { useCartStore } from '@/stores/cart';
+import ProductFilter from './ProductFilter.vue';
+import ProductSorter from './ProductSorter.vue';
+import ProductList from './ProductList.vue';
 
-const router = useRouter();
-const userStore = useUserStore();
 const cartStore = useCartStore();
-const isScrolled = ref(false);
+const { products, fetchProducts } = useProducts();
+const { applyFilter } = useProductFilter();
 
-const handleScroll = () => {
-  isScrolled.value = window.scrollY > 0;
+const filteredProducts = ref([]);
+
+const applyFilters = (filters) => {
+  filteredProducts.value = applyFilter(products.value, filters);
 };
 
-const handleLogin = () => {
-  router.push("/login");
+const handleSortChange = (sortOption) => {
+  // 处理排序逻辑
+  console.log('当前排序方式:', sortOption);
 };
 
 onMounted(() => {
-  window.addEventListener("scroll", handleScroll);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("scroll", handleScroll);
+  fetchProducts(); // 获取所有商品
 });
 </script>
 
@@ -136,6 +127,14 @@ onUnmounted(() => {
 .nav-item.router-link-active {
   color: var(--cosmic-blue);
   background: rgba(250, 159, 252, 0.1);
+}
+
+.filter-section {
+  margin-top: 100px; /* 确保分类不与导航栏重叠 */
+}
+
+.product-list-section {
+  margin-top: 20px; /* 商品列表的顶部间距 */
 }
 
 .user-area {

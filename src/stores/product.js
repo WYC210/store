@@ -136,5 +136,58 @@ export const useProductStore = defineStore('product', {
       this.sort = sort;
       return this.fetchProducts();
     }
+  },
+    // 新增：上架商品
+    async createProduct(productData) {
+      this.loading = true
+      try {
+        const response = await productService.createProduct(productData)
+        // 可选：更新本地商品列表
+        await this.fetchProducts() 
+        return response
+      } catch (error) {
+        this.error = errorHandler.handleApiError(error).message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 新增：更新商品
+    async updateProduct(productId, productData) {
+      this.loading = true
+      try {
+        const response = await productService.updateProduct(productId, productData)
+        // 更新当前商品详情缓存
+        cacheManager.set(`product_${productId}`, response)
+        if (this.currentProduct?.product_id === productId) {
+          this.currentProduct = response // 更新当前商品状态
+        }
+        return response
+      } catch (error) {
+        this.error = errorHandler.handleApiError(error).message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 新增：下架商品
+    async deactivateProduct(productId) {
+      this.loading = true
+      try {
+        await productService.deactivateProduct(productId)
+        // 从本地列表中移除或更新状态
+        this.products = this.products.filter(p => p.product_id !== productId)
+        if (this.currentProduct?.product_id === productId) {
+          this.currentProduct.is_active = false // 标记为下架
+        }
+      } catch (error) {
+        this.error = errorHandler.handleApiError(error).message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    }
   }
-}); 
+); 

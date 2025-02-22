@@ -105,7 +105,7 @@ const handlePayment = async () => {
       ElMessage.success('支付成功！');
       // 清除 checkout store 数据
       checkoutStore.clearOrderData();
-      router.push('/orders');
+      router.push('/cart');
     } else {
       throw new Error(response?.message || '支付失败');
     }
